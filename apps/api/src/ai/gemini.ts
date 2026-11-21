@@ -55,7 +55,7 @@ export class GeminiProvider implements TriageProvider {
     if (!this.clientPromise) {
       this.clientPromise = (async () => {
         const { GoogleGenAI } = await import('@google/genai');
-        return new GoogleGenAI({ apiKey: this.apiKey }) as unknown as GeminiClient;
+        return new GoogleGenAI({ apiKey: this.apiKey, apiVersion: 'v1beta' }) as unknown as GeminiClient;
       })();
     }
     return this.clientPromise;

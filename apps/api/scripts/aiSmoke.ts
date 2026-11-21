@@ -1,6 +1,17 @@
 import { loadConfig } from '../src/config.js';
 import { createTriageProvider } from '../src/ai/factory.js';
 
+// Load .env if present (native Node.js 20+ feature)
+try {
+  process.loadEnvFile?.();
+} catch {
+  try {
+    process.loadEnvFile?.('../../.env');
+  } catch {
+    // Fall back to existing process.env
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   let providerChoice = 'jarvis';

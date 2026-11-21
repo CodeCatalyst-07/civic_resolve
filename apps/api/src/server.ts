@@ -1,3 +1,14 @@
+// Load .env if present (native Node.js 20+ feature)
+try {
+  process.loadEnvFile?.();
+} catch {
+  try {
+    process.loadEnvFile?.('../../.env');
+  } catch {
+    // Fall back to existing process.env
+  }
+}
+
 import { loadConfig } from './config.js';
 import { createApp } from './app.js';
 import { logger } from './lib/logger.js';
