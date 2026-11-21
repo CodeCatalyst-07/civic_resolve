@@ -1,0 +1,46 @@
+@import '@fontsource/inter/latin.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #0F172A;
+  --color-surface: #FFFFFF;
+  --color-page: #F6F7F9;
+  --color-border: #E2E8F0;
+  --color-primary: #1D4ED8;
+  --color-accent: #0F766E;
+
+  --color-urgency-critical: #B91C1C;
+  --color-urgency-high: #C2410C;
+  --color-urgency-medium: #A16207;
+  --color-urgency-low: #475569;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #0F172A;
+    background-color: #F6F7F9;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Clear focus rings across all interactive controls */
+  :focus-visible {
+    outline: 2px solid #1D4ED8;
+    outline-offset: 2px;
+  }
+
+  /* Tabular numerals for ticket IDs and numerical data */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
