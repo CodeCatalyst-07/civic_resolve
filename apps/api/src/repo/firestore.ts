@@ -1,5 +1,13 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
-import { getFirestore, type Firestore, type CollectionReference } from 'firebase-admin/firestore';
+import {
+  getFirestore,
+  type Firestore,
+  type CollectionReference,
+  type Query,
+  type Transaction,
+  type QueryDocumentSnapshot,
+  type DocumentData,
+} from 'firebase-admin/firestore';
 import {
   Status,
   type Category,
@@ -58,7 +66,7 @@ function parseServiceAccount(raw: string): Record<string, unknown> {
 export class FirestoreTicketRepository implements TicketRepository {
   private readonly collectionName: string;
   private readonly firestore: Firestore;
-  private readonly collection: CollectionReference;
+  private readonly collection: CollectionReference<DocumentData>;
 
   public constructor(config: FirestoreConfig) {
     this.collectionName = config.collectionName || 'tickets';
@@ -155,7 +163,7 @@ export class FirestoreTicketRepository implements TicketRepository {
 
   public async update(ticket: Ticket): Promise<Result<Ticket, RepoError>> {
     try {
-      return await this.firestore.runTransaction(async (transaction) => {
+      return await this.firestore.runTransaction(async (transaction: Transaction) => {
         const docRef = this.collection.doc(ticket.id);
         const snapshot = await transaction.get(docRef);
 
@@ -206,7 +214,7 @@ export class FirestoreTicketRepository implements TicketRepository {
       ];
 
       // Query on indexed fields only
-      let q = this.collection.where('status', 'in', openStatuses);
+      let q: Query<DocumentData> = this.collection.where('status', 'in', openStatuses);
 
       if (options?.category) {
         q = q.where('category', '==', options.category);
@@ -214,7 +222,9 @@ export class FirestoreTicketRepository implements TicketRepository {
 
       // Fetch bounded collection (max 200)
       const snapshot = await q.limit(200).get();
-      let tickets: Ticket[] = snapshot.docs.map((d) => d.data() as Ticket);
+      let tickets: Ticket[] = snapshot.docs.map(
+        (d: QueryDocumentSnapshot<DocumentData>) => d.data() as Ticket
+      );
 
       if (options?.since) {
         tickets = tickets.filter((t) => t.created_at >= options.since!);
@@ -236,7 +246,7 @@ export class FirestoreTicketRepository implements TicketRepository {
   ): Promise<Result<{ tickets: Ticket[]; nextCursor?: string }, RepoError>> {
     try {
       const nowIso = new Date().toISOString();
-      let q = this.collection as FirebaseFirestore.Query;
+      let q: Query<DocumentData> = this.collection;
 
       if (query.status) {
         q = q.where('status', '==', query.status);
@@ -250,7 +260,9 @@ export class FirestoreTicketRepository implements TicketRepository {
 
       // Fetch bounded batch of candidate documents
       const snapshot = await q.limit(200).get();
-      let matching: Ticket[] = snapshot.docs.map((d) => d.data() as Ticket);
+      let matching: Ticket[] = snapshot.docs.map(
+        (d: QueryDocumentSnapshot<DocumentData>) => d.data() as Ticket
+      );
 
       // In-memory post-filtering for non-indexed fields
       if (query.ward) {
@@ -314,13 +326,15 @@ export class FirestoreTicketRepository implements TicketRepository {
 
   public async listResolvedRecent(limit: number): Promise<Result<Ticket[], RepoError>> {
     try {
-      const q = this.collection
+      const q: Query<DocumentData> = this.collection
         .where('status', '==', Status.RESOLVED)
         .limit(Math.max(1, limit));
 
       const snapshot = await q.get();
-      const resolved = snapshot.docs.map((d) => d.data() as Ticket);
-      resolved.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      const resolved: Ticket[] = snapshot.docs.map(
+        (d: QueryDocumentSnapshot<DocumentData>) => d.data() as Ticket
+      );
+      resolved.sort((a: Ticket, b: Ticket) => b.created_at.localeCompare(a.created_at));
       return ok(resolved);
     } catch {
       return err({
@@ -332,7 +346,7 @@ export class FirestoreTicketRepository implements TicketRepository {
 
   public async count(filters?: Partial<TicketQuery>): Promise<Result<number, RepoError>> {
     try {
-      let q = this.collection as FirebaseFirestore.Query;
+      let q: Query<DocumentData> = this.collection;
 
       if (filters?.status) {
         q = q.where('status', '==', filters.status);
@@ -347,14 +361,16 @@ export class FirestoreTicketRepository implements TicketRepository {
       if (filters?.ward || filters?.overdue !== undefined) {
         // Evaluate in-memory when non-indexed criteria are present
         const snapshot = await q.get();
-        let docs = snapshot.docs.map((d) => d.data() as Ticket);
+        let docs: Ticket[] = snapshot.docs.map(
+          (d: QueryDocumentSnapshot<DocumentData>) => d.data() as Ticket
+        );
         const nowIso = new Date().toISOString();
 
         if (filters.ward) {
-          docs = docs.filter((t) => t.ward === filters.ward);
+          docs = docs.filter((t: Ticket) => t.ward === filters.ward);
         }
         if (filters.overdue !== undefined) {
-          docs = docs.filter((ticket) => {
+          docs = docs.filter((ticket: Ticket) => {
             const isTerminal =
               ticket.status === Status.RESOLVED ||
               ticket.status === Status.CLOSED ||
