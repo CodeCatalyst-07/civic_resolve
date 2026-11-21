@@ -76,6 +76,15 @@ describe('API Integration Tests', () => {
     expect(res.body.data[0]).toHaveProperty('landmarks');
   });
 
+  it('GET /api/reports/recent returns public summaries and cache header', async () => {
+    const res = await request(app).get('/api/reports/recent?limit=5');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toContain('public, max-age=15');
+    expect(res.body).toHaveProperty('data');
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
   it('GET /api/geocode handles missing address and unavailable provider cleanly', async () => {
     // Missing address
     const badRes = await request(app).get('/api/geocode');

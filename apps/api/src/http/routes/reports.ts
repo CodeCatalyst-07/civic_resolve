@@ -49,5 +49,38 @@ export function createReportsRouter(container: AppContainer): Router {
     })
   );
 
+  /**
+   * Public feed of recent municipal grievances for home page awareness.
+   */
+  router.get(
+    '/recent',
+    asyncHandler(async (req, res) => {
+      const limitRaw = req.query.limit;
+      const limit =
+        typeof limitRaw === 'string'
+          ? Math.min(Math.max(parseInt(limitRaw, 10) || 6, 1), 20)
+          : 6;
+
+      const result = await container.repo.query({ limit });
+      if (!result.ok) {
+        res.status(500).json(apiError('internal_error', result.error.message));
+        return;
+      }
+
+      const summaries = result.value.tickets.map((t) => ({
+        id: t.id,
+        category: t.category,
+        urgency: t.urgency,
+        status: t.status,
+        summary: t.description.slice(0, 100),
+        duplicate_count: t.duplicate_count ?? 0,
+        created_at: t.created_at,
+      }));
+
+      res.setHeader('Cache-Control', 'public, max-age=15');
+      res.status(200).json(apiSuccess(summaries));
+    })
+  );
+
   return router;
 }
