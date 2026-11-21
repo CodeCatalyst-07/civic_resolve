@@ -77,3 +77,50 @@ export function createApp(config: Config, container?: AppContainer): express.Exp
 
   return app;
 }
+
+/**
+ * Builds a resilient Express application for degraded operational states
+ * (e.g. invalid environment configuration or unavailable persistent repository).
+ * Responds to /api/health with a safe degraded diagnostic (no secrets)
+ * and all other /api/* routes with a 503 Service Unavailable envelope.
+ */
+export function createDegradedApp(
+  errorCode: 'config_invalid' | 'repo_unavailable',
+  message: string
+): express.Express {
+  const app = express();
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+  app.use(helmet({ xPoweredBy: false }));
+  app.use(express.json({ limit: '20kb' }));
+  app.use(requestIdMiddleware);
+
+  const safeMessage = message
+    .replace(/AIzaSy[A-Za-z0-9_-]+/g, '[REDACTED_KEY]')
+    .replace(/-----BEGIN[A-Z\s]+-----[\s\S]+?-----END[A-Z\s]+-----/g, '[REDACTED_PEM]');
+
+  const healthHandler: express.RequestHandler = (_req, res) => {
+    res.status(200).json({
+      status: 'degraded',
+      error: {
+        code: errorCode,
+        message: safeMessage,
+      },
+      time: new Date().toISOString(),
+    });
+  };
+
+  app.get('/api/health', healthHandler);
+  app.get('/health', healthHandler);
+
+  app.use((_req, res) => {
+    res.status(503).json({
+      error: {
+        code: 'service_unavailable',
+        message: `CivicResolve API is currently in degraded state (${errorCode}): ${safeMessage}. Inspect /api/health for diagnostic status.`,
+      },
+    });
+  });
+
+  return app;
+}

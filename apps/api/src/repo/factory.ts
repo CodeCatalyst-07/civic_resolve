@@ -25,8 +25,13 @@ export function createRepository(config: Config): TicketRepository {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (config.NODE_ENV === 'production') {
+        throw new Error(
+          `Firestore repository initialization failed in production: ${msg}`
+        );
+      }
       console.error(
-        '[CivicResolve Firestore Error]: Failed to initialize Firestore repository, falling back to in-memory store:',
+        '[CivicResolve Firestore Error]: Failed to initialize Firestore repository, falling back to in-memory store in non-production mode:',
         msg
       );
       return new InMemoryTicketRepository();

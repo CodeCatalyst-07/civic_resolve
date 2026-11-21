@@ -1,43 +1,35 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Request, Response } from 'express';
-import { createApp } from '@civicresolve/api/app';
-import { loadConfig } from '@civicresolve/api/config';
+import { createApp, createDegradedApp } from '@civicresolve/api/app';
+import { loadConfig, type Config } from '@civicresolve/api/config';
 import { buildContainer } from '@civicresolve/api/compose';
 
 let appInstance: ReturnType<typeof createApp> | null = null;
-let startupError: string | null = null;
 
 function getApp(): ReturnType<typeof createApp> {
   if (appInstance) {
     return appInstance;
   }
 
+  let config: Config;
   try {
-    const config = loadConfig();
+    config = loadConfig();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[CivicResolve Configuration Startup Error]:', msg);
+    appInstance = createDegradedApp('config_invalid', 'Invalid or missing environment configuration');
+    return appInstance;
+  }
+
+  try {
     const container = buildContainer(config);
     appInstance = createApp(config, container);
     return appInstance;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    startupError = msg;
-    console.error('[CivicResolve API Startup Error]:', msg);
-
-    // Safe fallback to in-memory mode so serverless function remains operational
-    try {
-      const fallbackConfig = loadConfig({
-        NODE_ENV: 'production',
-        REPO_DRIVER: 'memory',
-        AI_PROVIDER: 'mock',
-        AUTO_SEED: 'true',
-      });
-      const fallbackContainer = buildContainer(fallbackConfig);
-      appInstance = createApp(fallbackConfig, fallbackContainer);
-      return appInstance;
-    } catch (fallbackErr: unknown) {
-      const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      console.error('[CivicResolve Fallback Startup Critical Error]:', fallbackMsg);
-      throw fallbackErr;
-    }
+    console.error('[CivicResolve Repository Startup Error]:', msg);
+    appInstance = createDegradedApp('repo_unavailable', 'Persistent repository failed to initialize');
+    return appInstance;
   }
 }
 
@@ -62,13 +54,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     console.error('[CivicResolve Serverless Handler Error]:', msg);
 
     if (!res.headersSent) {
-      res.statusCode = 500;
+      res.statusCode = 503;
       res.setHeader('Content-Type', 'application/json');
       res.end(
         JSON.stringify({
-          error: 'Internal Server Error',
-          message: msg,
-          startupError,
+          error: {
+            code: 'service_unavailable',
+            message: 'CivicResolve serverless function caught an unexpected runtime error.',
+          },
         })
       );
     }

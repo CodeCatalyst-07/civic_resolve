@@ -10,18 +10,43 @@ try {
 }
 
 import { loadConfig } from './config.js';
-import { createApp } from './app.js';
+import { createApp, createDegradedApp } from './app.js';
+import { buildContainer } from './compose.js';
 import { logger } from './lib/logger.js';
 
-const config = loadConfig();
-const app = createApp(config);
+let app;
+let activePort = 3001;
+let envMode = 'development';
+let aiMode = 'mock';
+let repoMode = 'memory';
 
-const server = app.listen(config.PORT, '0.0.0.0', () => {
-  logger.info(`CivicResolve API server running on port ${config.PORT}`, {
-    port: config.PORT,
-    environment: config.NODE_ENV,
-    aiProvider: config.AI_PROVIDER,
-    repoDriver: config.REPO_DRIVER,
+try {
+  const config = loadConfig();
+  activePort = config.PORT;
+  envMode = config.NODE_ENV;
+  aiMode = config.AI_PROVIDER;
+  repoMode = config.REPO_DRIVER;
+
+  try {
+    const container = buildContainer(config);
+    app = createApp(config, container);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('Repository failed to initialize, starting in degraded mode', { error: msg });
+    app = createDegradedApp('repo_unavailable', 'Persistent repository failed to initialize');
+  }
+} catch (err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err);
+  logger.error('Configuration failed to load, starting in degraded mode', { error: msg });
+  app = createDegradedApp('config_invalid', 'Invalid or missing environment configuration');
+}
+
+const server = app.listen(activePort, '0.0.0.0', () => {
+  logger.info(`CivicResolve API server running on port ${activePort}`, {
+    port: activePort,
+    environment: envMode,
+    aiProvider: aiMode,
+    repoDriver: repoMode,
   });
 });
 
