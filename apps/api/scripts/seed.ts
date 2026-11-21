@@ -95,6 +95,13 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n✅ Seeding complete: Successfully seeded ${result.value.inserted} tickets!`);
+  console.log('\nStatus Breakdown:');
+  let statusSum = 0;
+  for (const [status, count] of Object.entries(result.value.statusCounts)) {
+    console.log(`  - ${status.padEnd(14)}: ${count}`);
+    statusSum += count;
+  }
+  console.log(`\nStatus Count Sum: ${statusSum} / ${result.value.inserted} (exact match: ${statusSum === result.value.inserted})`);
 }
 
 main().catch((err) => {

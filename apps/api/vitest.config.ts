@@ -47,7 +47,7 @@ export default defineConfig({
         'src/services/**': {
           lines: 85,
           functions: 85,
-          branches: 75,
+          branches: 85,
           statements: 85,
         },
         'src/repo/**': {
@@ -59,7 +59,7 @@ export default defineConfig({
         'src/http/**': {
           lines: 85,
           functions: 85,
-          branches: 75,
+          branches: 85,
           statements: 85,
         },
       },

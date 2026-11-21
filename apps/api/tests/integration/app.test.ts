@@ -454,4 +454,207 @@ describe('API Integration Tests', () => {
       .send({ urgency: Urgency.HIGH, reason: 'bad' });
     expect(authBadOverride.status).toBe(400);
   });
+
+  it('boosts urgency from Medium to High when report coordinates lie within 200m of a sensitive site', async () => {
+    // NPS Indiranagar: lat: 12.9718, lng: 77.6415
+    // Text cmp-03-multi-issue produces Medium urgency in MockProvider
+    const res = await request(app)
+      .post('/api/reports')
+      .send({
+        description:
+          'Garbage dump spilling on footpath and water pipe leak flooding the street near Market Circle, Ward 4.',
+        location: {
+          ward: 'Ward 1',
+          lat: 12.9719,
+          lng: 77.6416, // ~15m from school (National Public School Indiranagar at 12.9718, 77.6415)
+        },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.ticket).toBeDefined();
+    expect(res.body.data.ticket.urgency).toBe(Urgency.HIGH);
+    expect(res.body.data.ticket.applied_rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'R3_LOCATION_BOOST',
+          label: 'Located near a school or hospital (sensitive area priority rule)',
+        }),
+      ])
+    );
+  });
+
+  it('validates input schemas and rejects invalid query or body payloads with 400', async () => {
+    const authHeaders = {
+      'X-Demo-Role': 'authority',
+      'X-Demo-Authority-Code': 'secret-authority-pass-99',
+    };
+
+    // Analyze invalid
+    const aRes = await request(app).post('/api/reports/analyze').send({ description: 'short' });
+    expect(aRes.status).toBe(400);
+    expect(aRes.body.error.code).toBe('validation_failed');
+
+    // Submit invalid
+    const sRes = await request(app).post('/api/reports').send({ description: 'short' });
+    expect(sRes.status).toBe(400);
+    expect(sRes.body.error.code).toBe('validation_failed');
+
+    // Geocode missing address
+    const gRes = await request(app).get('/api/geocode?address=');
+    expect(gRes.status).toBe(400);
+    expect(gRes.body.error.code).toBe('validation_failed');
+
+    // Authority query invalid limit
+    const qRes = await request(app).get('/api/authority/tickets?limit=999').set(authHeaders);
+    expect(qRes.status).toBe(400);
+    expect(qRes.body.error.code).toBe('validation_failed');
+  });
+
+  it('maps internal service failures and upstream geocoding errors to correct HTTP status codes', async () => {
+    const authHeaders = {
+      'X-Demo-Role': 'authority',
+      'X-Demo-Authority-Code': 'secret-authority-pass-99',
+    };
+
+    // Construct app with failing service stubs to hit error branches
+    const failingContainer = buildContainer(baseConfig, {
+      ticketService: {
+        analyzeReport: async () => ({ ok: false, error: { code: 'internal_error', message: 'Triage crashed' } }),
+        submitReport: async () => ({ ok: false, error: { code: 'internal_error', message: 'DB write failed' } }),
+        getStats: async () => ({ ok: false, error: { code: 'internal_error', message: 'Stats calculation failed' } }),
+        reopenTicket: async () => ({ ok: false, error: { code: 'conflict', message: 'Version conflict' } }),
+        updateStatus: async () => ({ ok: false, error: { code: 'internal_error', message: 'DB down' } }),
+        overrideTriage: async () => ({ ok: false, error: { code: 'internal_error', message: 'Override failed' } }),
+        getPublicTicket: async () => ({ ok: false, error: { code: 'not_found', message: 'Not found' } }),
+        supportReport: async () => ({ ok: false, error: { code: 'internal_error', message: 'Support failed' } }),
+        listQueue: async () => ({ ok: false, error: { code: 'internal_error', message: 'Queue failed' } }),
+        getAuthorityTicket: async () => ({ ok: false, error: { code: 'not_found', message: 'Not found' } }),
+      } as unknown as AppContainer['ticketService'],
+      geocoding: {
+        isAvailable: () => true,
+        geocode: async (address: string) => {
+          if (address === 'rate-limited') {
+            return { ok: false, error: { kind: 'rate_limited', message: 'Rate limited by Google' } };
+          }
+          return { ok: false, error: { kind: 'network_error', message: 'Google API unreachable' } };
+        },
+      } as unknown as AppContainer['geocoding'],
+    });
+
+    const errorApp = createApp(baseConfig, failingContainer);
+
+    // Analyze error -> 500
+    const aRes = await request(errorApp).post('/api/reports/analyze').send({ description: VALID_POTHOLE_TEXT });
+    expect(aRes.status).toBe(500);
+
+    // Submit error -> 500
+    const sRes = await request(errorApp).post('/api/reports').send({ description: VALID_POTHOLE_TEXT });
+    expect(sRes.status).toBe(500);
+
+    // Stats error -> 500
+    const stRes = await request(errorApp).get('/api/stats');
+    expect(stRes.status).toBe(500);
+
+    // Authority status error -> 500
+    const fakeId = 'CR-00000000';
+    const pRes = await request(errorApp)
+      .patch(`/api/authority/tickets/${fakeId}/status`)
+      .set(authHeaders)
+      .send({ status: Status.IN_PROGRESS });
+    expect(pRes.status).toBe(500);
+
+    // Authority override error -> 500
+    const oRes = await request(errorApp)
+      .post(`/api/authority/tickets/${fakeId}/override`)
+      .set(authHeaders)
+      .send({ urgency: Urgency.HIGH, reason: 'Valid override reason' });
+    expect(oRes.status).toBe(500);
+
+    // Reopen conflict -> 409
+    const rRes = await request(errorApp).post(`/api/tickets/${fakeId}/reopen`).send({});
+    expect(rRes.status).toBe(409);
+
+    // Reopen internal error -> 500
+    const failingReopenContainer = buildContainer(baseConfig, {
+      ticketService: {
+        reopenTicket: async () => ({ ok: false, error: { code: 'internal_error', message: 'Reopen crashed' } }),
+        overrideTriage: async () => ({ ok: false, error: { code: 'validation_failed', message: 'Invalid override data' } }),
+        updateStatus: async () => ({ ok: false, error: { code: 'conflict', message: 'Invalid transition conflict' } }),
+      } as unknown as AppContainer['ticketService'],
+    });
+    const errorApp2 = createApp(baseConfig, failingReopenContainer);
+
+    const rErrRes = await request(errorApp2).post(`/api/tickets/${fakeId}/reopen`).send({});
+    expect(rErrRes.status).toBe(500);
+
+    const oValRes = await request(errorApp2)
+      .post(`/api/authority/tickets/${fakeId}/override`)
+      .set(authHeaders)
+      .send({ urgency: Urgency.HIGH, reason: 'Valid override reason' });
+    expect(oValRes.status).toBe(400);
+
+    const sConflictRes = await request(errorApp2)
+      .patch(`/api/authority/tickets/${fakeId}/status`)
+      .set(authHeaders)
+      .send({ status: Status.IN_PROGRESS });
+    expect(sConflictRes.status).toBe(409);
+
+    // Geocode rate limited -> 429
+    const gRateRes = await request(errorApp).get('/api/geocode?address=rate-limited');
+    expect(gRateRes.status).toBe(429);
+
+    // Geocode 502 upstream error
+    const gUpstreamRes = await request(errorApp).get('/api/geocode?address=upstream-error');
+    expect(gUpstreamRes.status).toBe(502);
+
+    // Support report internal error -> 500
+    const sup500Res = await request(errorApp).post(`/api/tickets/${fakeId}/support`);
+    expect(sup500Res.status).toBe(500);
+
+    // Custom request ID and meta keys
+    const reqIdRes = await request(errorApp).get('/api/health').set('x-request-id', 'custom-uuid-456');
+    expect(reqIdRes.headers['x-request-id']).toBe('custom-uuid-456');
+
+    const metaKeysRes = await request(errorApp).get('/api/meta?keys=1');
+    expect(metaKeysRes.status).toBe(200);
+
+    // Additional route error branches (not_found and conflict)
+    const notFoundContainer = buildContainer(baseConfig, {
+      ticketService: {
+        supportReport: async () => ({ ok: false, error: { code: 'conflict', message: 'Conflict support' } }),
+        reopenTicket: async () => ({ ok: false, error: { code: 'not_found', message: 'Not found' } }),
+        updateStatus: async () => ({ ok: false, error: { code: 'not_found', message: 'Not found' } }),
+        overrideTriage: async () => ({ ok: false, error: { code: 'not_found', message: 'Not found' } }),
+      } as unknown as AppContainer['ticketService'],
+    });
+    const errorApp3 = createApp(baseConfig, notFoundContainer);
+
+    const supConflictRes = await request(errorApp3).post(`/api/tickets/${fakeId}/support`);
+    expect(supConflictRes.status).toBe(409);
+
+    const reopenNotFoundRes = await request(errorApp3).post(`/api/tickets/${fakeId}/reopen`).send({});
+    expect(reopenNotFoundRes.status).toBe(404);
+
+    const statusNotFoundRes = await request(errorApp3)
+      .patch(`/api/authority/tickets/${fakeId}/status`)
+      .set(authHeaders)
+      .send({ status: Status.IN_PROGRESS });
+    expect(statusNotFoundRes.status).toBe(404);
+
+    const overrideNotFoundRes = await request(errorApp3)
+      .post(`/api/authority/tickets/${fakeId}/override`)
+      .set(authHeaders)
+      .send({ urgency: Urgency.HIGH, reason: 'Valid override reason' });
+    expect(overrideNotFoundRes.status).toBe(404);
+
+    // Support report not_found branch
+    const supportNotFoundContainer = buildContainer(baseConfig, {
+      ticketService: {
+        supportReport: async () => ({ ok: false, error: { code: 'not_found', message: 'Ticket not found' } }),
+      } as unknown as AppContainer['ticketService'],
+    });
+    const errorApp4 = createApp(baseConfig, supportNotFoundContainer);
+    const supNotFoundRes = await request(errorApp4).post(`/api/tickets/${fakeId}/support`);
+    expect(supNotFoundRes.status).toBe(404);
+  });
 });

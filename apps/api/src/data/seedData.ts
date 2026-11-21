@@ -653,12 +653,17 @@ function isClearable(repo: unknown): repo is Clearable {
   );
 }
 
+export interface SeedResult {
+  readonly inserted: number;
+  readonly statusCounts: Record<Status, number>;
+}
+
 /**
  * Seeds a repository with realistic test tickets.
  *
  * @param repo - Ticket repository instance (in-memory or Firestore)
  * @param options - Seeding options (reset flag, anchor timestamp)
- * @returns Result with count of inserted tickets
+ * @returns Result with count of inserted tickets and status breakdown
  */
 export async function seedTickets(
   repo: TicketRepository,
@@ -667,15 +672,27 @@ export async function seedTickets(
     now?: Date;
     randomBytes?: (n: number) => Uint8Array;
   }
-): Promise<Result<{ inserted: number }, RepoError>> {
+): Promise<Result<SeedResult, RepoError>> {
   if (options?.reset && isClearable(repo)) {
     await repo.clear();
   }
 
   const tickets = generateSeedTickets(options?.now, options?.randomBytes);
+  const statusCounts: Record<Status, number> = {
+    [Status.SUBMITTED]: 0,
+    [Status.UNDER_REVIEW]: 0,
+    [Status.ASSIGNED]: 0,
+    [Status.IN_PROGRESS]: 0,
+    [Status.RESOLVED]: 0,
+    [Status.CLOSED]: 0,
+    [Status.REJECTED]: 0,
+    [Status.REOPENED]: 0,
+  };
+
   let inserted = 0;
 
   for (const ticket of tickets) {
+    statusCounts[ticket.status] = (statusCounts[ticket.status] ?? 0) + 1;
     const res = await repo.create(ticket);
     if (!res.ok) {
       return res;
@@ -683,5 +700,5 @@ export async function seedTickets(
     inserted++;
   }
 
-  return ok({ inserted });
+  return ok({ inserted, statusCounts });
 }

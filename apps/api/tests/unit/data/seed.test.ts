@@ -73,13 +73,20 @@ describe('Seed Data Generator (seedData.ts)', () => {
     expect(duplicateReports.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('seeds an InMemoryTicketRepository and correctly persists all tickets', async () => {
+  it('seeds an InMemoryTicketRepository and correctly persists all tickets with matching status count sum', async () => {
     const repo = new InMemoryTicketRepository();
     const result = await seedTickets(repo, { now: referenceNow });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.inserted).toBeGreaterThanOrEqual(35);
+      expect(result.value.statusCounts).toBeDefined();
+
+      const sumOfStatusCounts = Object.values(result.value.statusCounts).reduce(
+        (acc, count) => acc + count,
+        0
+      );
+      expect(sumOfStatusCounts).toBe(result.value.inserted);
     }
 
     const openRes = await repo.listOpen();

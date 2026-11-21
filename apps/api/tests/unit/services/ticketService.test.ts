@@ -3,6 +3,8 @@ import {
   Category,
   Urgency,
   Status,
+  Department,
+  err,
   type PublicTicketView,
   type AuthorityTicketView,
 } from '@civicresolve/shared';
@@ -394,5 +396,166 @@ describe('TicketService (Unit Tests)', () => {
     if (!resMissing.ok) {
       expect(resMissing.error.code).toBe('not_found');
     }
+  });
+
+  it('reopenTicket and getAuthorityTicket handle invalid IDs and missing tickets gracefully', async () => {
+    const fakeId = 'CR-00000000';
+    const badId = 'invalid';
+
+    // reopenTicket
+    const r1 = await ticketService.reopenTicket(badId);
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.error.code).toBe('not_found');
+
+    const r2 = await ticketService.reopenTicket(fakeId);
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.error.code).toBe('not_found');
+
+    // getAuthorityTicket
+    const a1 = await ticketService.getAuthorityTicket(badId);
+    expect(a1.ok).toBe(false);
+    if (!a1.ok) expect(a1.error.code).toBe('not_found');
+
+    const a2 = await ticketService.getAuthorityTicket(fakeId);
+    expect(a2.ok).toBe(false);
+    if (!a2.ok) expect(a2.error.code).toBe('not_found');
+  });
+
+  it('supportReport retries on concurrent modification conflict', async () => {
+    const subRes = await ticketService.submitReport({
+      description: VALID_POTHOLE_TEXT,
+    });
+    const ticketId = subRes.ok && subRes.value.ticket ? subRes.value.ticket.id : '';
+
+    let attempts = 0;
+    const originalUpdate = repo.update.bind(repo);
+    repo.update = async (ticket) => {
+      attempts++;
+      if (attempts === 1) {
+        return err({ code: 'conflict', message: 'Simulated concurrent conflict' });
+      }
+      return originalUpdate(ticket);
+    };
+
+    const supRes = await ticketService.supportReport(ticketId);
+    expect(supRes.ok).toBe(true);
+    expect(attempts).toBe(2);
+
+    // Now test conflict retry exhaustion
+    repo.update = async () => err({ code: 'conflict', message: 'Persistent conflict' });
+    const supFail = await ticketService.supportReport(ticketId);
+    expect(supFail.ok).toBe(false);
+    if (!supFail.ok) {
+      expect(supFail.error.code).toBe('conflict');
+    }
+
+    // Restore original update
+    repo.update = originalUpdate;
+  });
+
+  it('listQueue returns internal_error when repository query fails', async () => {
+    const originalQuery = repo.query.bind(repo);
+    repo.query = async () => err({ code: 'internal_error', message: 'Disk read failure' });
+
+    const qRes = await ticketService.listQueue({ limit: 10 });
+    expect(qRes.ok).toBe(false);
+    if (!qRes.ok) {
+      expect(qRes.error.code).toBe('internal_error');
+    }
+
+    repo.query = originalQuery;
+  });
+
+  it('handles repo update conflict and error in reopenTicket and overrideTriage', async () => {
+    const subRes = await ticketService.submitReport({
+      description: VALID_POTHOLE_TEXT,
+    });
+    const ticketId = subRes.ok && subRes.value.ticket ? subRes.value.ticket.id : '';
+
+    // Move to resolved
+    await ticketService.updateStatus(ticketId, { status: Status.UNDER_REVIEW });
+    await ticketService.updateStatus(ticketId, { status: Status.ASSIGNED });
+    await ticketService.updateStatus(ticketId, { status: Status.IN_PROGRESS });
+    await ticketService.updateStatus(ticketId, {
+      status: Status.RESOLVED,
+      note: 'Road patch completed by maintenance wing.',
+    });
+
+    const originalUpdate = repo.update.bind(repo);
+
+    // Reopen fails with conflict
+    repo.update = async () => err({ code: 'conflict', message: 'Reopen conflict' });
+    const reopenConflict = await ticketService.reopenTicket(ticketId, 'Still sinking');
+    expect(reopenConflict.ok).toBe(false);
+    if (!reopenConflict.ok) expect(reopenConflict.error.code).toBe('conflict');
+
+    // Reopen fails with internal_error
+    repo.update = async () => err({ code: 'internal_error', message: 'Storage crash' });
+    const reopenErr = await ticketService.reopenTicket(ticketId, 'Still sinking');
+    expect(reopenErr.ok).toBe(false);
+    if (!reopenErr.ok) expect(reopenErr.error.code).toBe('internal_error');
+
+    // Override fails with conflict
+    repo.update = async () => err({ code: 'conflict', message: 'Override conflict' });
+    const overrideConflict = await ticketService.overrideTriage(ticketId, {
+      urgency: Urgency.CRITICAL,
+      reason: 'Safety audit escalation',
+    });
+    expect(overrideConflict.ok).toBe(false);
+    if (!overrideConflict.ok) expect(overrideConflict.error.code).toBe('conflict');
+
+    // Override fails with internal_error
+    repo.update = async () => err({ code: 'internal_error', message: 'DB crash' });
+    const overrideErr = await ticketService.overrideTriage(ticketId, {
+      urgency: Urgency.CRITICAL,
+      reason: 'Safety audit escalation',
+    });
+    expect(overrideErr.ok).toBe(false);
+    if (!overrideErr.ok) expect(overrideErr.error.code).toBe('internal_error');
+
+    repo.update = originalUpdate;
+  });
+
+  it('handles updateStatus when repo update fails with conflict or error', async () => {
+    const subRes = await ticketService.submitReport({
+      description: VALID_POTHOLE_TEXT,
+    });
+    const ticketId = subRes.ok && subRes.value.ticket ? subRes.value.ticket.id : '';
+
+    const originalUpdate = repo.update.bind(repo);
+
+    repo.update = async () => err({ code: 'conflict', message: 'Status update conflict' });
+    const resConflict = await ticketService.updateStatus(ticketId, { status: Status.UNDER_REVIEW });
+    expect(resConflict.ok).toBe(false);
+    if (!resConflict.ok) expect(resConflict.error.code).toBe('conflict');
+
+    repo.update = async () => err({ code: 'internal_error', message: 'Disk down' });
+    const resErr = await ticketService.updateStatus(ticketId, { status: Status.UNDER_REVIEW });
+    expect(resErr.ok).toBe(false);
+    if (!resErr.ok) expect(resErr.error.code).toBe('internal_error');
+
+    // supportReport on nonexistent ticket
+    const supNotFound = await ticketService.supportReport('CR-00000000');
+    expect(supNotFound.ok).toBe(false);
+    if (!supNotFound.ok) expect(supNotFound.error.code).toBe('not_found');
+
+    // overrideTriage with category override (auto-resolves department)
+    repo.update = originalUpdate;
+    const catOverride = await ticketService.overrideTriage(ticketId, {
+      category: Category.GARBAGE,
+      reason: 'Recategorized to garbage',
+    });
+    expect(catOverride.ok).toBe(true);
+    if (catOverride.ok) {
+      expect(catOverride.value.category).toBe(Category.GARBAGE);
+      expect(catOverride.value.department).toBe('Sanitation & Waste Management');
+    }
+
+    // overrideTriage with explicit department override
+    const deptOverride = await ticketService.overrideTriage(ticketId, {
+      department: Department.ROADS,
+      reason: 'Cross-functional road repair assistance',
+    });
+    expect(deptOverride.ok).toBe(true);
   });
 });

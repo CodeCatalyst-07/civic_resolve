@@ -19,6 +19,7 @@
     "firestore:smoke": "npm run firestore:smoke --workspace=@civicresolve/api --",
     "lint": "eslint .",
     "secrets:check": "node scripts/secretsCheck.mjs",
+    "seed": "npm run seed --workspace=@civicresolve/api --",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
