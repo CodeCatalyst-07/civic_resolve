@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { decideTriage, type TriageInput } from '../../../src/domain/triage.js';
-import { Category, Urgency, type TriageSuggestion, type MissingInfoField } from '@civicresolve/shared';
+import { Category, Urgency, Department, type TriageSuggestion, type MissingInfoField } from '@civicresolve/shared';
 import { DOMAIN_CONFIG } from '../../../src/domain/config.js';
 
 describe('Triage Decision Engine (decideTriage)', () => {
@@ -65,7 +65,7 @@ describe('Triage Decision Engine (decideTriage)', () => {
     });
 
     const input: TriageInput = {
-      description: 'Civil court dispute regarding inheritance, but transformer blast occurred outside courthouse with fire!',
+      description: 'Civil court dispute regarding inheritance, but transformer blast occurred outside courthouse with live wire on street!',
       suggestion: nonCivicDangerSuggestion,
       now: mockNow,
     };
@@ -76,7 +76,37 @@ describe('Triage Decision Engine (decideTriage)', () => {
       expect(outcome.emergency_notice).toBe(true);
       expect(outcome.decision.emergency_notice).toBe(true);
       expect(outcome.decision.urgency).toBe(Urgency.CRITICAL);
-      expect(outcome.decision.category).toBe(Category.PUBLIC_HAZARD);
+      expect(outcome.decision.category).toBe(Category.OTHER_CIVIC);
+      expect(outcome.decision.department).toBe(Department.WARD_OFFICE);
+      expect(outcome.decision.needs_manual_triage).toBe(true);
+    }
+  });
+
+  it('rejects spam-like text without creating a ticket, but carries emergency notice if danger phrase is present', () => {
+    const inputWithSpamAndDanger: TriageInput = {
+      description: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa live wire sparking on road aaaaaaaaaaaaaaaaaa',
+      suggestion: validSuggestion,
+      now: mockNow,
+    };
+
+    const outcome = decideTriage(inputWithSpamAndDanger);
+    expect(outcome.kind).toBe('rejected');
+    if (outcome.kind === 'rejected') {
+      expect(outcome.emergency_notice).toBe(true);
+    }
+  });
+
+  it('rejects spam-like text without emergency notice when no danger phrase is present', () => {
+    const inputWithSpam: TriageInput = {
+      description: 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+      suggestion: validSuggestion,
+      now: mockNow,
+    };
+
+    const outcome = decideTriage(inputWithSpam);
+    expect(outcome.kind).toBe('rejected');
+    if (outcome.kind === 'rejected') {
+      expect(outcome.emergency_notice).toBe(false);
     }
   });
 

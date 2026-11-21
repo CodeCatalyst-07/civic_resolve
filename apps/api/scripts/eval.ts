@@ -141,14 +141,21 @@ async function main(): Promise<void> {
   console.log(`- Average Latency:      ${avgLatency} ms\n`);
 
   if (shouldWrite) {
-    const docPath = new URL('../../../docs/EVAL.md', import.meta.url);
+    const fileName = `EVAL-${providerChoice.toLowerCase()}.md`;
+    const docPath = new URL(`../../../docs/${fileName}`, import.meta.url);
     mkdirSync(dirname(docPath.pathname), { recursive: true });
 
-    const markdownReport = `# CivicResolve Model Benchmark Results
+    const disclaimer =
+      providerChoice === 'mock'
+        ? '> [!NOTE]\n> **Honest Disclosure**: This evaluation uses the deterministic `mock` triage provider derived from test fixtures. It verifies plumbing, prompt schema parsing, error recovery, and domain rule wiring; it is **NOT** a benchmark of live AI model accuracy.\n'
+        : '> [!NOTE]\n> **Live Provider Benchmark**: This evaluation ran against a live AI model provider.\n';
+
+    const markdownReport = `# CivicResolve Model Benchmark Results (${providerChoice.toUpperCase()})
 
 Last Updated: ${new Date().toISOString()}
-Provider Tested: \`${providerChoice}\` (\`${provider.model}\`)
+Provider Tested: \`${providerChoice}\` (Model: \`${provider.model}\`)
 
+${disclaimer}
 ## Metrics Summary
 | Metric | Result | Benchmark Target |
 | :--- | :---: | :---: |
@@ -173,7 +180,7 @@ ${rows
 `;
 
     writeFileSync(docPath, markdownReport, 'utf-8');
-    console.log(`Successfully wrote evaluation report to docs/EVAL.md\n`);
+    console.log(`Successfully wrote evaluation report to docs/${fileName}\n`);
   }
 
   // If running with mock provider, enforce 100% accuracy for CI safety

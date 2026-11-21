@@ -20,6 +20,7 @@ export interface GeocodingResult {
 }
 
 export interface GeocodingProvider {
+  isAvailable?(): boolean;
   geocode(
     address: string,
     options?: { signal?: AbortSignal }

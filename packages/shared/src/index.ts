@@ -241,9 +241,165 @@ export const ticketSchema = z.object({
   escalated: z.boolean(),
   final_decision: finalDecisionSchema,
   attachments: z.array(z.string()),
+  version: z.number().int().positive().default(1),
 });
 
 export type Ticket = z.infer<typeof ticketSchema>;
+
+/**
+ * Public view DTO with explicit allowlist (never returns sensitive internals or raw model text).
+ */
+export const publicTicketViewSchema = z.object({
+  id: z.string(),
+  status: statusSchema,
+  category: categorySchema,
+  urgency: urgencySchema,
+  department: z.string(),
+  summary: z.string(),
+  ward: z.string().optional(),
+  created_at: z.string().datetime(),
+  due_at: z.string().datetime(),
+  overdue: z.boolean(),
+  duplicate_count: z.number().int().nonnegative(),
+  reasons: z.array(z.string()),
+  applied_rules: z.array(appliedRuleSchema),
+  timeline: z.array(
+    z.object({
+      id: z.string(),
+      status: statusSchema,
+      role: roleSchema,
+      note: z.string().optional(),
+      at: z.string().datetime(),
+    })
+  ),
+  emergency_notice: z.boolean(),
+});
+
+export type PublicTicketView = z.infer<typeof publicTicketViewSchema>;
+
+/**
+ * Authority view DTO extending public view with internal investigation details and audit data.
+ */
+export const authorityTicketViewSchema = publicTicketViewSchema.extend({
+  description: z.string(),
+  location: ticketLocationSchema.optional(),
+  ai_suggestion: triageSuggestionSchema.nullable(),
+  ai_source: aiSourceSchema.optional(),
+  needs_manual_triage: z.boolean(),
+  escalated: z.boolean(),
+  reopen_count: z.number().int().nonnegative(),
+  version: z.number().int().positive(),
+});
+
+export type AuthorityTicketView = z.infer<typeof authorityTicketViewSchema>;
+
+/**
+ * Request schema for pre-submission triage analysis.
+ */
+export const analyzeReportInputSchema = createReportInputSchema.extend({
+  round: z.number().int().min(0).max(2).optional(),
+});
+
+export type AnalyzeReportInput = z.infer<typeof analyzeReportInputSchema>;
+
+/**
+ * Request schema for final ticket submission.
+ */
+export const submitReportInputSchema = createReportInputSchema.extend({
+  category_override: categorySchema.optional(),
+});
+
+export type SubmitReportInput = z.infer<typeof submitReportInputSchema>;
+
+/**
+ * Request schema for status transitions.
+ */
+export const statusUpdateInputSchema = z.object({
+  status: statusSchema,
+  note: z.string().trim().max(500, 'Note cannot exceed 500 characters').optional(),
+});
+
+export type StatusUpdateInput = z.infer<typeof statusUpdateInputSchema>;
+
+/**
+ * Request schema for authority manual triage override.
+ */
+export const overrideInputSchema = z.object({
+  category: categorySchema.optional(),
+  urgency: urgencySchema.optional(),
+  department: departmentSchema.optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(5, 'Override reason must be at least 5 characters')
+    .max(300, 'Override reason cannot exceed 300 characters'),
+});
+
+export type OverrideInput = z.infer<typeof overrideInputSchema>;
+
+/**
+ * Request schema for ticket search, filtering, and cursor pagination.
+ */
+export const ticketQuerySchema = z.object({
+  status: statusSchema.optional(),
+  category: categorySchema.optional(),
+  ward: z.string().optional(),
+  urgency: urgencySchema.optional(),
+  overdue: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .transform((val) => (typeof val === 'boolean' ? val : val === 'true'))
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().optional(),
+});
+
+export type TicketQuery = z.infer<typeof ticketQuerySchema>;
+
+/**
+ * Standard API error codes.
+ */
+export const ApiErrorCode = {
+  VALIDATION_FAILED: 'validation_failed',
+  NOT_FOUND: 'not_found',
+  FORBIDDEN: 'forbidden',
+  RATE_LIMITED: 'rate_limited',
+  CONFLICT: 'conflict',
+  AI_UNAVAILABLE: 'ai_unavailable',
+  INTERNAL_ERROR: 'internal_error',
+} as const;
+
+export type ApiErrorCode = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];
+export const API_ERROR_CODES = Object.values(ApiErrorCode) as [ApiErrorCode, ...ApiErrorCode[]];
+export const apiErrorCodeSchema = z.enum(API_ERROR_CODES);
+
+/**
+ * Standard API response envelope.
+ */
+export interface ApiSuccessEnvelope<T> {
+  readonly data: T;
+}
+
+export interface ApiErrorEnvelope {
+  readonly error: {
+    readonly code: ApiErrorCode;
+    readonly message: string;
+  };
+}
+
+export type ApiResponseEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope;
+
+export function apiSuccess<T>(data: T): ApiSuccessEnvelope<T> {
+  return Object.freeze({ data });
+}
+
+export function apiError(code: ApiErrorCode, message: string): ApiErrorEnvelope {
+  return Object.freeze({
+    error: Object.freeze({
+      code,
+      message,
+    }),
+  });
+}
 
 /**
  * Functional Result pattern for expected failures without throwing.

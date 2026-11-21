@@ -6,6 +6,10 @@ import type { GeocodingProvider, GeocodingResult, GeoError } from './types.js';
  * Allows CivicResolve to run completely offline without Google Maps.
  */
 export class NullGeocodingProvider implements GeocodingProvider {
+  public isAvailable(): boolean {
+    return false;
+  }
+
   public async geocode(
     _address: string,
     _options?: { signal?: AbortSignal }

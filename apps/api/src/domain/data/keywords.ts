@@ -1,11 +1,12 @@
 import type { Category } from '@civicresolve/shared';
 
 /**
- * High-risk danger keywords covering English, Hindi, Marathi, and Hinglish.
+ * High-risk danger keywords and contextual phrases covering English, Hindi, Marathi, and Hinglish.
  * Used by detectImmediateDanger to establish an emergency floor (Critical urgency).
+ * Hardened to contextual phrases to prevent false positives on benign phrases like "fire station road", "fire sale", or "wire shop".
  */
 export const DANGER_KEYWORDS: readonly string[] = Object.freeze([
-  // English
+  // English contextual danger phrases
   'live wire',
   'open manhole',
   'gas leak',
@@ -16,7 +17,11 @@ export const DANGER_KEYWORDS: readonly string[] = Object.freeze([
   'electrocution',
   'electric shock',
   'transformer blast',
-  'fire',
+  'caught fire',
+  'on fire',
+  'fire broke out',
+  'fire hazard',
+  'building on fire',
   'exposed cable',
   'exposed wire',
   'hanging wire',
@@ -26,12 +31,13 @@ export const DANGER_KEYWORDS: readonly string[] = Object.freeze([
   'short circuit',
   'open drain',
   'deep trench',
+  'electric current',
 
-  // Hindi / Marathi / Hinglish (Devanagari and Latin script)
+  // Hindi / Marathi / Hinglish contextual danger phrases (Devanagari and Latin script)
   'bijli ka taar',
-  'current',
-  'aag',
   'aag lag gayi',
+  'aag lagli',
+  'aag lagi hai',
   'khula manhole',
   'khula gutter',
   'khuli nali',
@@ -40,12 +46,9 @@ export const DANGER_KEYWORDS: readonly string[] = Object.freeze([
   'deewar giri',
   'taar toot gaya',
   'current lagna',
-  'vidyut',
-  'shola',
-  'dhurandhar',
+  'current lag raha',
+  'vidyut taar',
   'dharaasai',
-  'padla',
-  'aag lagli',
   'vijeechi taar',
   'motar blast',
 ]);

@@ -42,6 +42,7 @@ describe('Duplicate Candidate Detection (duplicates.ts)', () => {
       ai_suggestion: null,
     },
     attachments: [],
+    version: 1,
     location: { lat: 12.9718, lng: 77.5948 }, // ~30m away
     ...overrides,
   });

@@ -1,38 +1,30 @@
-# CivicResolve Model Benchmark Results
+# CivicResolve Model Benchmark Index
 
-Last Updated: 2026-11-21T05:45:09.604Z
-Provider Tested: `mock` (`mock-triage-v1`)
+This directory contains evaluation benchmarks across supported triage providers in CivicResolve.
 
-## Metrics Summary
-| Metric | Result | Benchmark Target |
-| :--- | :---: | :---: |
-| **Category Accuracy** | **100%** | $\ge 90\%$ |
-| **Urgency Floor ($\ge$ Min)** | **100%** | $100\%$ |
-| **Outcome Match** | **100%** | $100\%$ |
-| **Emergency Hazard Detection** | **100%** | $100\%$ |
-| **Degraded Count** | **0** | $0$ (offline mode) |
-| **Average Latency** | **2 ms** | $< 2500$ ms |
+## Evaluation Methodology & Honest Disclosure
 
-## Fixture Evaluation Breakdown
-| Fixture ID | Outcome | Category | Urgency | Emergency | Latency |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| `cmp-01-pothole-school` | ✅ `ticket` | ✅ | ✅ | ✅ | 24ms |
-| `cmp-02-vague-road` | ✅ `follow_up` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-03-multi-issue` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-04-spam` | ✅ `rejected` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-05-live-wire-emergency` | ✅ `ticket` | ✅ | ✅ | ✅ | 1ms |
-| `cmp-06-abusive-real` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-07-hindi` | ✅ `ticket` | ✅ | ✅ | ✅ | 19ms |
-| `cmp-08-marathi` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-09-hinglish` | ✅ `ticket` | ✅ | ✅ | ✅ | 1ms |
-| `cmp-10-prompt-injection` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-11-very-long` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-12-empty` | ✅ `rejected` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-13-emoji-only` | ✅ `rejected` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-14-garbage-overflow` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-15-streetlight-broken` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-16-water-leakage` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-17-sewer-overflow` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-18-fallen-tree` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-19-open-manhole-emergency` | ✅ `ticket` | ✅ | ✅ | ✅ | 0ms |
-| `cmp-20-non-civic-tax` | ✅ `rejected` | ✅ | ✅ | ✅ | 0ms |
+> [!IMPORTANT]
+> **Mock Provider vs. Live Model Benchmarks**:
+> - **Mock Provider ([EVAL-mock.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-mock.md))**: Evaluates pipeline wiring, request envelope validation, JSON repair resilience, cache lookups, and deterministic domain rules against the 20 multilingual fixtures. It proves architectural correctness and safety properties; it is **NOT** a measurement of live LLM accuracy.
+> - **Jarvis Labs Gemma 4 ([EVAL-jarvis.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-jarvis.md))**: Live endpoint benchmark measuring Gemma 4 31B IT inference on Jarvis Labs infrastructure.
+> - **Google Gemini ([EVAL-gemini.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-gemini.md))**: Live endpoint benchmark measuring official Google Gemini API inference.
+
+## Provider Benchmark Reports
+
+- [EVAL-mock.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-mock.md) — Deterministic mock provider evaluation (CI baseline: 100% required)
+- [EVAL-jarvis.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-jarvis.md) — Live Gemma 4 31B IT benchmark
+- [EVAL-gemini.md](file:///Users/arnav/Desktop/CivicResolve/docs/EVAL-gemini.md) — Live Gemini model benchmark
+
+## Running Evaluations
+
+```bash
+# Mock provider (offline, 100% CI pass)
+npm run eval --workspace=@civicresolve/api -- --provider mock --write
+
+# Live Jarvis Labs (requires JARVISLABS_API_KEY)
+npm run eval --workspace=@civicresolve/api -- --provider jarvis --write
+
+# Live Google Gemini (requires GEMINI_API_KEY)
+npm run eval --workspace=@civicresolve/api -- --provider gemini --write
+```

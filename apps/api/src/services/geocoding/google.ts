@@ -38,6 +38,10 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
   private readonly fetchFn: typeof fetch;
   private readonly cache = new Map<string, GeocodingResult>();
 
+  public isAvailable(): boolean {
+    return true;
+  }
+
   public constructor(options: GoogleGeocodingOptions) {
     this.apiKey = options.apiKey;
     this.timeoutMs = options.timeoutMs ?? 5000;

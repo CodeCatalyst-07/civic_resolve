@@ -28,6 +28,7 @@ describe('Ticket Lifecycle & Status Transitions (status.ts)', () => {
       ai_suggestion: null,
     },
     attachments: [],
+    version: 1,
   });
 
   describe('Exhaustive Legal and Illegal State Transitions', () => {

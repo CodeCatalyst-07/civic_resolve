@@ -33,7 +33,7 @@ export type TriageOutcome =
       readonly kind: 'rejected';
       readonly reason: string;
       readonly guidance: string;
-      readonly emergency_notice: false;
+      readonly emergency_notice: boolean;
     }
   | {
       readonly kind: 'follow_up';
@@ -76,23 +76,38 @@ export function decideTriage(
     suggestion = input.suggestion;
   }
 
-  // Check for immediate life/safety hazard first
+  // Check for spam first: spam-like text must NEVER create a ticket,
+  // but may still carry emergency notice if a danger phrase is present.
+  const isSpam = looksLikeSpam(input.description);
   const dangerDetected = detectImmediateDanger(input.description);
 
-  // If immediate danger is detected, public safety takes absolute priority:
+  if (isSpam) {
+    return Object.freeze({
+      kind: 'rejected',
+      reason: DOMAIN_MESSAGES.rejection.reason,
+      guidance: DOMAIN_MESSAGES.rejection.guidance,
+      emergency_notice: dangerDetected,
+    });
+  }
+
+  // If immediate danger is detected, public safety takes priority:
   // It MUST produce a confirmed ticket at Critical urgency and display emergency advice (112).
-  // It must never be rejected or delayed for follow-up questions.
+  // The department MUST come from resolveDepartment(category, ward), never hardcoded.
+  // If the AI says the text is not a civic issue or category is not_civic:
+  // show emergency notice, still file ticket with category other_civic, department ward_office, and needs_manual_triage = true.
   if (dangerDetected) {
+    let needsManualTriage = isFallback || suggestion.confidence < config.confidenceThreshold;
+
     if (!suggestion.is_civic_issue || suggestion.category === Category.NOT_CIVIC) {
       suggestion = {
         ...suggestion,
         is_civic_issue: true,
-        category: Category.PUBLIC_HAZARD,
+        category: Category.OTHER_CIVIC,
       };
+      needsManualTriage = true;
     }
 
     const decision = applyRules(suggestion, input, config);
-    const needsManualTriage = isFallback || suggestion.confidence < config.confidenceThreshold;
 
     const finalDecisionWithTriageFlag: FinalDecision = Object.freeze({
       ...decision,
@@ -105,14 +120,6 @@ export function decideTriage(
       needs_manual_triage: needsManualTriage,
       emergency_notice: true,
     });
-  }
-
-  // Spam detection overrides civic validity (when no danger is present)
-  if (looksLikeSpam(input.description)) {
-    suggestion = {
-      ...suggestion,
-      is_civic_issue: false,
-    };
   }
 
   // Case 1: Non-civic issue rejection

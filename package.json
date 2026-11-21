@@ -16,7 +16,9 @@
     "eval": "npm run eval --workspace=@civicresolve/api --",
     "ai:smoke": "npm run ai:smoke --workspace=@civicresolve/api --",
     "geocode:smoke": "npm run geocode:smoke --workspace=@civicresolve/api --",
+    "firestore:smoke": "npm run firestore:smoke --workspace=@civicresolve/api --",
     "lint": "eslint .",
+    "secrets:check": "node scripts/secretsCheck.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

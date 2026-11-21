@@ -22,6 +22,18 @@ import {
   finalDecisionSchema,
   ticketEventSchema,
   ticketSchema,
+  publicTicketViewSchema,
+  type PublicTicketView,
+  authorityTicketViewSchema,
+  type AuthorityTicketView,
+  analyzeReportInputSchema,
+  submitReportInputSchema,
+  statusUpdateInputSchema,
+  overrideInputSchema,
+  ticketQuerySchema,
+  ApiErrorCode,
+  apiSuccess,
+  apiError,
   ok,
   err,
 } from './index.js';
@@ -385,6 +397,7 @@ describe('Ticket and TicketEvent Schemas', () => {
     };
 
     expect(ticketSchema.parse(ticket).id).toBe('CR-3A4B5C6D');
+    expect(ticketSchema.parse(ticket).version).toBe(1);
   });
 
   it('rejects negative duplicate or reopen counts', () => {
@@ -433,5 +446,126 @@ describe('Result helper functions', () => {
       expect(res.error).toBe('Invalid transition');
     }
     expect(Object.isFrozen(res)).toBe(true);
+  });
+});
+
+describe('Phase 2.3 Shared DTO and Request Schemas', () => {
+  const mockNow = new Date().toISOString();
+
+  it('validates a correct PublicTicketView', () => {
+    const publicView: PublicTicketView = {
+      id: 'CR-3A4B5C6D',
+      status: 'submitted',
+      category: 'pothole',
+      urgency: 'high',
+      department: 'Roads & Infrastructure',
+      summary: 'Deep dangerous pothole outside school',
+      ward: 'Ward 12',
+      created_at: mockNow,
+      due_at: mockNow,
+      overdue: false,
+      duplicate_count: 2,
+      reasons: ['Outside school'],
+      applied_rules: [{ id: 'R3_LOCATION_BOOST', label: 'School boost', effect: 'Raised to High' }],
+      timeline: [
+        {
+          id: 'evt-1',
+          status: 'submitted',
+          role: 'citizen',
+          note: 'Report filed',
+          at: mockNow,
+        },
+      ],
+      emergency_notice: false,
+    };
+
+    const parsed = publicTicketViewSchema.parse(publicView);
+    expect(parsed.id).toBe('CR-3A4B5C6D');
+    expect(parsed.department).toBe('Roads & Infrastructure');
+  });
+
+  it('validates a correct AuthorityTicketView containing extended fields', () => {
+    const authorityView: AuthorityTicketView = {
+      id: 'CR-3A4B5C6D',
+      status: 'assigned',
+      category: 'pothole',
+      urgency: 'high',
+      department: 'Roads & Infrastructure',
+      summary: 'Deep dangerous pothole outside school',
+      ward: 'Ward 12',
+      created_at: mockNow,
+      due_at: mockNow,
+      overdue: false,
+      duplicate_count: 2,
+      reasons: ['Outside school'],
+      applied_rules: [],
+      timeline: [],
+      emergency_notice: false,
+      description: 'Original citizen complaint with all details.',
+      location: { lat: 12.9716, lng: 77.5946, address: 'Indiranagar' },
+      ai_suggestion: null,
+      ai_source: 'mock',
+      needs_manual_triage: false,
+      escalated: false,
+      reopen_count: 0,
+      version: 2,
+    };
+
+    const parsed = authorityTicketViewSchema.parse(authorityView);
+    expect(parsed.version).toBe(2);
+    expect(parsed.description).toContain('Original citizen complaint');
+  });
+
+  it('validates AnalyzeReportInput and SubmitReportInput schemas', () => {
+    const analyzeInput = analyzeReportInputSchema.parse({
+      description: 'Pothole on 100ft road near signal.',
+      round: 1,
+    });
+    expect(analyzeInput.round).toBe(1);
+
+    const submitInput = submitReportInputSchema.parse({
+      description: 'Pothole on 100ft road near signal.',
+      category_override: 'pothole',
+    });
+    expect(submitInput.category_override).toBe('pothole');
+  });
+
+  it('validates StatusUpdateInput and OverrideInput schemas', () => {
+    const statusInput = statusUpdateInputSchema.parse({
+      status: 'resolved',
+      note: 'Road resurfacing completed.',
+    });
+    expect(statusInput.status).toBe('resolved');
+
+    const overrideInput = overrideInputSchema.parse({
+      urgency: 'critical',
+      reason: 'Physical inspection confirmed live hazard',
+    });
+    expect(overrideInput.urgency).toBe('critical');
+
+    expect(() =>
+      overrideInputSchema.parse({
+        reason: 'bad', // less than 5 chars
+      })
+    ).toThrow();
+  });
+
+  it('validates TicketQuery schema and type coercions', () => {
+    const query = ticketQuerySchema.parse({
+      status: 'assigned',
+      overdue: 'true',
+      limit: '15',
+    });
+    expect(query.overdue).toBe(true);
+    expect(query.limit).toBe(15);
+  });
+
+  it('validates response envelopes and error helper functions', () => {
+    const success = apiSuccess({ ticketId: 'CR-1234' });
+    expect(success.data.ticketId).toBe('CR-1234');
+
+    const error = apiError(ApiErrorCode.VALIDATION_FAILED, 'Invalid input payload');
+    expect(error.error.code).toBe('validation_failed');
+    expect(error.error.message).toBe('Invalid input payload');
   });
 });

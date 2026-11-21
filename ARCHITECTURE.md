@@ -12,12 +12,12 @@
                                     |
 +-------------------------------------------------------------------------+
 |                        apps/api (HTTP Layer)                            |
-|             (Express, Helmet, RateLimiter, RequestId, CORS)             |
+|        (Express 4, Helmet, RateLimiter, RequestId, Role Middleware)     |
 +-------------------------------------------------------------------------+
                                     |
 +-------------------------------------------------------------------------+
 |                            Services Layer                               |
-|        (Grievance Submission Orchestrator, Audit Log Service)           |
+|              (TicketService, TriageService, Geocoding)                  |
 +-------------------------------------------------------------------------+
             /                             |                          \
            /                              |                           \
@@ -25,7 +25,7 @@
 |       AI Layer       |      |     Domain Layer     |      |  Repository Layer  |
 |  (Triage Providers)  |      |   (Pure Functions)   |      | (TicketRepository) |
 |  - Jarvis (Gemma 4)  |      |   - Urgency Engine   |      |  - In-Memory Repo  |
-|  - Gemini 1.5 Flash  |      |   - Department Rules |      |  - Firestore Repo  |
+|  - Gemini 3.5 Flash  |      |   - Department Rules |      |  - Firestore Repo  |
 |  - Deterministic Mock|      |   - State Machine    |      +--------------------+
 +----------------------+      +----------------------+
 ```
@@ -90,7 +90,7 @@
 
 ---
 
-## 3. Phase 2.2: Triage Pipeline, AI Providers & Server-Side Geocoding
+## 3. Triage Pipeline, AI Providers & Server-Side Geocoding
 
 ### Complete Grievance Analysis Flow (Cheap First)
 ```text
@@ -148,32 +148,78 @@ Citizen Grievance Submission (description, location, ward)
     ▼
 9. Privacy-Safe Metadata Logging:
     └── Logs provider name, outcome kind, cached/degraded flags, duration; NEVER logs complaint text or keys.
+```
 
 ### Server-side Geocoding with Graceful Degradation
 - **`GoogleGeocodingProvider`**: Connects to Google Maps Geocoding REST API with `region=in` bias, timeout from `GEOCODE_TIMEOUT_MS`, in-memory cache, and mainland India bounding box validation (6°N-38°N, 68°E-98°E).
 - **`NullGeocodingProvider`**: Fallback provider when `GOOGLE_MAPS_SERVER_KEY` is omitted, returning `not_configured` while keeping all grievance triage capabilities 100% operational offline.
-```
 
 ---
 
-## 4. Shared Types & Contracts (`packages/shared`)
+## 4. Persistence Layer & Ticket Service (Phase 2.3)
+
+### Repository Layer (`apps/api/src/repo`)
+A unified `TicketRepository` contract decouples business workflows from the database implementation:
+- **`InMemoryTicketRepository`**: Deterministic, deep-cloned memory store with cursor pagination, multi-field filtering, and version checking. Used in tests, offline local development, and CI.
+- **`FirestoreTicketRepository`**: Production driver backed by Google Cloud Firestore (`firebase-admin@14.5.1`). Implements optimistic concurrency inside atomic Firestore transactions (`transaction.get` -> verify `version === ticket.version` -> `transaction.set(..., { version: version + 1 })`).
+- **Data Protection (`firestore.rules`)**: Client SDK direct access is completely disabled (`allow read, write: if false;`). All reads and writes must pass through the Express API backend via Firebase Admin SDK.
+- **Optimized Indexes (`firestore.indexes.json`)**: Configured for sorting by urgency and `due_at` with compound filters (`status`, `ward`, `category`).
+
+### Ticket Service (`apps/api/src/services/ticketService.ts`)
+Encapsulates high-level lifecycle orchestrations:
+1. **Allowlist DTO Projection**:
+   - `toPublicTicket`: Citizen privacy projection. Strips raw descriptions, precise GPS coordinates, AI tokens, and administrative flags. Only returns non-sensitive fields (`id`, `status`, `category`, `urgency`, `department`, `summary`, `ward`, `due_at`, `overdue`, `duplicate_count`, `timeline`).
+   - `toAuthorityTicket`: Full internal projection for municipal dispatchers.
+2. **Community Support Escalation**:
+   - Nearby citizens clicking "Add your voice" increment `duplicate_count`. The service dynamically re-runs domain rules. Invariant: Urgency can only increase, never decrease.
+3. **Lazy SLA Escalation**:
+   - Reads dynamically check if `due_at < now` and trigger auto-escalation (+1 urgency level) if not already escalated, persisting the change immediately.
+4. **Citizen Reopen Control**:
+   - Enforces business rule: Resolved tickets can be reopened by citizens strictly once (`reopen_count <= 1`).
+
+---
+
+## 5. Composition Root & HTTP API
+
+### Composition Root Pattern (`apps/api/src/compose.ts`)
+- Pure dependency injection container.
+- `buildContainer(config, overrides?)` instantiates repositories, AI providers, geocoding, caches, budget managers, clock, and randomness generators.
+- `createApp(config, container?)` accepts an optional container for test isolation.
+- In Vercel serverless deployment (`api/index.ts`), the container is instantiated **once at module scope** across invocations, reusing database connection pools and AI client instances.
+
+### Security & Rate Limiting
+- **Demo Role Gate**: `X-Demo-Role` (`citizen` or `authority`). If `DEMO_AUTHORITY_CODE` is set, authority operations require `X-Demo-Authority-Code` compared via SHA-256 constant-time comparison (`safeCompareCodes`) to prevent timing attacks.
+- **Sliding-Window Rate Limiting**:
+  - Global: 100 requests / 15 minutes.
+  - Grievance analysis (`/api/reports/analyze`): 20 requests / minute.
+  - Grievance submission (`/api/reports`): 10 requests / minute.
+  - Community support (`/api/tickets/:id/support`): 30 requests / minute.
+  - Server-side geocoding (`/api/geocode`): 30 requests / minute.
+- **Payload Protection**: Express JSON body size strictly capped at 20KB (`limit: '20kb'`).
+
+---
+
+## 6. Shared Types & Contracts (`packages/shared`)
 Both `apps/web` and `apps/api` share canonical types and Zod schemas from `@civicresolve/shared`:
-- Enums: `Category`, `Urgency`, `Status`, `Role`, `Department`
-- Schemas: `createReportInputSchema`, `triageSuggestionSchema`, `finalDecisionSchema`, `ticketSchema`
-- Utilities: `stripControlCharacters`, `Result<T, E>` (`ok`, `err`)
+- **Enums**: `Category`, `Urgency`, `Status`, `Role`, `Department`, `AiSource`
+- **Domain Schemas**: `createReportInputSchema`, `triageSuggestionSchema`, `finalDecisionSchema`, `ticketSchema`
+- **DTO Views**: `publicTicketViewSchema`, `authorityTicketViewSchema`
+- **Request Schemas**: `analyzeReportInputSchema`, `submitReportInputSchema`, `statusUpdateInputSchema`, `overrideInputSchema`, `ticketQuerySchema`
+- **API Helpers**: `apiSuccess<T>`, `apiError(code, message)`
 
 ---
 
-## 5. Strict Layer Boundaries & Purity Enforcement
-- **Domain (`apps/api/src/domain`)**: Pure TypeScript functions with zero external dependencies, no network, no I/O, no crypto. Injected time and randomness. Prohibited from importing `ai/`, `repo/`, or `http/`.
-- **AI Layer (`apps/api/src/ai`)**: Prohibited from importing `http/` or `repo/`.
-- **Services Layer (`apps/api/src/services`)**: Prohibited from importing `http/` or `repo/`.
-- **Enforcement**: Statically verified via ESLint `no-restricted-imports`, `no-restricted-properties`, and `no-restricted-syntax`.
+## 7. Strict Layer Boundaries & Architectural Purity
+Layer integrity is statically verified by custom ESLint boundary rules:
+- **`domain/`**: Pure functions only. Zero I/O, no network, no dates without parameters, no crypto. Cannot import `ai/`, `repo/`, `services/`, or `http/`.
+- **`ai/`**: Cannot import `repo/`, `services/`, or `http/`.
+- **`repo/`**: Cannot import `ai/`, `services/`, or `http/`.
+- **`services/`**: Banned from importing `http/` or concrete repo implementations (`repo/memory*`, `repo/firestore*`). Only imports `repo/types.js`.
+- **`http/`**: Banned from importing `ai/` or `repo/` directly. All operations route through `services/` and the composition root.
 
 ---
 
-## 6. Hosting & Deployment Topology
-- **Single Vercel Project**:
-  - `apps/web` is built as static assets and served from CDN edge.
-  - `api/index.ts` is deployed as a Vercel Serverless Function under `/api`.
-  - Same-origin routing eliminates CORS overhead in production.
+## 8. Deterministic Seed Data
+- Pure generator `generateSeedTickets(now, randomBytes)` generates 39 realistic municipal grievance tickets across 8 synthetic wards.
+- Covers varied categories, statuses, overdue tickets, 2 duplicate clusters, and an active safety hazard.
+- CLI script `apps/api/scripts/seed.ts` supports seeding into both in-memory and live Cloud Firestore instances (`npm run seed -- --driver firestore`).

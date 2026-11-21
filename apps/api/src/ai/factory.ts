@@ -64,3 +64,5 @@ export function createTriageProvider(
 
   return withResilience(innerProvider, deps.resilienceOptions);
 }
+
+export const createAiProvider = createTriageProvider;

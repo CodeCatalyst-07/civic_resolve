@@ -8,6 +8,7 @@ import {
   classifyByKeywords,
   looksLikeSpam,
   findDuplicateCandidates,
+  type DuplicateCandidate,
   type TriageOutcome,
   type SensitiveSite,
   type DomainConfig,
@@ -43,6 +44,7 @@ export interface TriageServiceMeta {
 
 export interface TriageServiceResult {
   readonly outcome: TriageOutcome;
+  readonly duplicateCandidates: readonly DuplicateCandidate[];
   readonly meta: TriageServiceMeta;
 }
 
@@ -107,7 +109,7 @@ export function createTriageService(deps: TriageServiceDeps): TriageService {
           duration_ms,
         });
 
-        return { outcome, meta };
+        return { outcome, duplicateCandidates: [], meta };
       }
 
       // Step 2: Cache lookup by deterministic SHA-256(text + ward)
@@ -216,6 +218,7 @@ export function createTriageService(deps: TriageServiceDeps): TriageService {
 
       return {
         outcome: finalOutcome,
+        duplicateCandidates,
         meta,
       };
     },

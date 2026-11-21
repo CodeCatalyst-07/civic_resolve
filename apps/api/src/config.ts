@@ -29,6 +29,8 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
     ALLOWED_ORIGINS: z.string().optional().default(''),
+    DEMO_AUTHORITY_CODE: z.string().optional(),
+    AUTO_SEED: z.enum(['true', 'false']).default('true'),
   })
   .superRefine((data, ctx) => {
     if (data.AI_PROVIDER === 'jarvis') {
@@ -53,7 +55,7 @@ const envSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['GEMINI_MODEL'],
-          message: 'GEMINI_MODEL is required when AI_PROVIDER is "gemini" (e.g. "gemini-1.5-flash")',
+          message: 'GEMINI_MODEL is required when AI_PROVIDER is "gemini" (e.g. "gemini-3.5-flash-lite")',
         });
       }
     }

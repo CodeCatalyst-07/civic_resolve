@@ -34,7 +34,32 @@ describe('detectImmediateDanger', () => {
       expected: true,
     },
     {
-      desc: 'detects Marathi/Hindi keyword "aag"',
+      desc: 'avoids false positives on benign phrases containing bare "fire" like "fire station road"',
+      text: 'Pothole right near fire station road next to police post.',
+      expected: false,
+    },
+    {
+      desc: 'avoids false positives on commercial phrases like "fire sale"',
+      text: 'Store having a fire sale is creating sidewalk crowding.',
+      expected: false,
+    },
+    {
+      desc: 'avoids false positives on commercial phrases like "wire shop"',
+      text: 'Garbage piled up outside electrical wire shop in market.',
+      expected: false,
+    },
+    {
+      desc: 'detects real contextual danger phrase "fire broke out"',
+      text: 'Garbage dump caught fire and fire broke out near residential apartments.',
+      expected: true,
+    },
+    {
+      desc: 'detects real contextual danger phrase "on fire"',
+      text: 'Public transformer is on fire on main avenue.',
+      expected: true,
+    },
+    {
+      desc: 'detects Marathi/Hindi contextual danger phrase "aag lag gayi"',
       text: 'Kachre ke dher me aag lag gayi hai.',
       expected: true,
     },

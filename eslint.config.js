@@ -116,7 +116,7 @@ export default tseslint.config(
       ],
     },
   },
-  // Architecture boundaries: AI layer cannot import from http/ or repo/
+  // Architecture boundaries: AI layer cannot import from http/, repo/, or services/
   {
     files: ['apps/api/src/ai/**/*.{ts,tsx}'],
     rules: {
@@ -130,24 +130,67 @@ export default tseslint.config(
                 '**/repo/**',
                 '**/http',
                 '**/http/**',
+                '**/services',
+                '**/services/**',
                 '../repo',
                 '../repo/**',
                 '../http',
                 '../http/**',
+                '../services',
+                '../services/**',
                 '../../repo',
                 '../../repo/**',
                 '../../http',
                 '../../http/**',
+                '../../services',
+                '../../services/**',
               ],
               message:
-                'Architectural Boundary Violation: AI layer cannot import from http/ or repo/ layers.',
+                'Architectural Boundary Violation: AI layer cannot import from http/, repo/, or services/ layers.',
             },
           ],
         },
       ],
     },
   },
-  // Architecture boundaries: Services layer cannot import from http/ or repo/
+  // Architecture boundaries: Repo layer cannot import from http/, ai/, or services/
+  {
+    files: ['apps/api/src/repo/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/http',
+                '**/http/**',
+                '**/ai',
+                '**/ai/**',
+                '**/services',
+                '**/services/**',
+                '../http',
+                '../http/**',
+                '../ai',
+                '../ai/**',
+                '../services',
+                '../services/**',
+                '../../http',
+                '../../http/**',
+                '../../ai',
+                '../../ai/**',
+                '../../services',
+                '../../services/**',
+              ],
+              message:
+                'Architectural Boundary Violation: Repo layer cannot import from http/, ai/, or services/ layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Architecture boundaries: Services layer cannot import from http/ or concrete repo implementations
   {
     files: ['apps/api/src/services/**/*.{ts,tsx}'],
     rules: {
@@ -157,25 +200,70 @@ export default tseslint.config(
           patterns: [
             {
               group: [
-                '**/repo',
-                '**/repo/**',
                 '**/http',
                 '**/http/**',
-                '../repo',
-                '../repo/**',
                 '../http',
                 '../http/**',
-                '../../repo',
-                '../../repo/**',
                 '../../http',
                 '../../http/**',
+                '**/repo/memory*',
+                '**/repo/firestore*',
+                '**/repo/factory*',
+                '../repo/memory*',
+                '../repo/firestore*',
+                '../repo/factory*',
+                '../../repo/memory*',
+                '../../repo/firestore*',
+                '../../repo/factory*',
               ],
               message:
-                'Architectural Boundary Violation: Services layer cannot import from http/ or repo/ layers.',
+                'Architectural Boundary Violation: Services layer cannot import from http/ or concrete repo implementations (only repo/types.js is permitted).',
             },
           ],
         },
       ],
+    },
+  },
+  // Architecture boundaries: HTTP routes cannot import ai/ or repo/ directly
+  {
+    files: ['apps/api/src/http/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/ai',
+                '**/ai/**',
+                '**/repo',
+                '**/repo/**',
+                '../ai',
+                '../ai/**',
+                '../repo',
+                '../repo/**',
+                '../../ai',
+                '../../ai/**',
+                '../../repo',
+                '../../repo/**',
+              ],
+              message:
+                'Architectural Boundary Violation: HTTP layer cannot import from ai/ or repo/ directly (use compose/services).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Scripts environment (Node.js globals)
+  {
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+      },
     },
   }
 );

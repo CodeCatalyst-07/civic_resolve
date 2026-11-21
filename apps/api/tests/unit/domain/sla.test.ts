@@ -57,6 +57,7 @@ describe('SLA Management & Escalation (sla.ts)', () => {
         ai_suggestion: null,
       },
       attachments: [],
+      version: 1,
       ...overrides,
     });
 
