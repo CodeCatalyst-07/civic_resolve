@@ -16,7 +16,7 @@ import { logger } from './lib/logger.js';
 const config = loadConfig();
 const app = createApp(config);
 
-const server = app.listen(config.PORT, () => {
+const server = app.listen(config.PORT, '0.0.0.0', () => {
   logger.info(`CivicResolve API server running on port ${config.PORT}`, {
     port: config.PORT,
     environment: config.NODE_ENV,
