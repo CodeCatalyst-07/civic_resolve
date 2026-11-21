@@ -25,6 +25,21 @@ export const LEGAL_TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = Ob
 });
 
 /**
+ * Permitted status transitions for municipal authorities.
+ * Derived from LEGAL_TRANSITIONS excluding citizen-only actions (reopening).
+ */
+export const AUTHORITY_TRANSITIONS: Readonly<Record<Status, readonly Status[]>> = Object.freeze({
+  [Status.SUBMITTED]: Object.freeze([Status.UNDER_REVIEW, Status.REJECTED]),
+  [Status.UNDER_REVIEW]: Object.freeze([Status.ASSIGNED, Status.REJECTED]),
+  [Status.ASSIGNED]: Object.freeze([Status.IN_PROGRESS, Status.UNDER_REVIEW]),
+  [Status.IN_PROGRESS]: Object.freeze([Status.RESOLVED, Status.ASSIGNED]),
+  [Status.RESOLVED]: Object.freeze([Status.CLOSED]),
+  [Status.REOPENED]: Object.freeze([Status.UNDER_REVIEW, Status.ASSIGNED, Status.IN_PROGRESS]),
+  [Status.CLOSED]: Object.freeze([]),
+  [Status.REJECTED]: Object.freeze([]),
+});
+
+/**
  * Contextual metadata required for performing a ticket state transition.
  */
 export interface TransitionContext {

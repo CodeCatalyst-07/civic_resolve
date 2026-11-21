@@ -70,11 +70,18 @@ describe('LocationMap Component', () => {
       maps: {
         Map: MockMap,
         Marker: MockMarker,
+        marker: {
+          AdvancedMarkerElement: MockMarker,
+        },
         Animation: { DROP: 1 },
       },
     };
 
     (window as unknown as { __CIVIC_MAPS_KEY__?: string }).__CIVIC_MAPS_KEY__ = 'test-fake-maps-key';
+    (import.meta as unknown as { env: Record<string, string> }).env = {
+      VITE_GOOGLE_MAPS_BROWSER_KEY: 'test-fake-maps-key',
+      VITE_GOOGLE_MAPS_MAP_ID: 'test-map-id',
+    };
   });
 
   it('renders interactive map region and initializes Google Map instance', async () => {

@@ -29,26 +29,38 @@ All text and interactive controls exceed W3C WCAG 2.1 AA requirements ($\ge 4.5:
 
 | Element Pair | Foreground | Background | Contrast Ratio | WCAG 2.1 AA Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Body text on surface** | `#0F172A` | `#FFFFFF` | **17.51 : 1** | PASS ($\ge 4.5:1$) |
-| **Body text on page** | `#0F172A` | `#F6F7F9` | **16.03 : 1** | PASS ($\ge 4.5:1$) |
-| **Primary button text** | `#FFFFFF` | `#1D4ED8` | **5.23 : 1** | PASS ($\ge 4.5:1$) |
-| **Accent button text** | `#FFFFFF` | `#0F766E` | **4.64 : 1** | PASS ($\ge 4.5:1$) |
+| **Reference: Black on white** | `#000000` | `#FFFFFF` | **21.00 : 1** | PASS (Exact reference) |
+| **Reference: #767676 on white**| `#767676` | `#FFFFFF` | **4.54 : 1** | PASS (Exact reference) |
+| **Body text on surface** | `#0F172A` | `#FFFFFF` | **17.85 : 1** | PASS ($\ge 4.5:1$) |
+| **Body text on page** | `#0F172A` | `#F6F7F9` | **16.65 : 1** | PASS ($\ge 4.5:1$) |
+| **Primary button text** | `#FFFFFF` | `#1D4ED8` | **6.70 : 1** | PASS ($\ge 4.5:1$) |
+| **Accent button text** | `#FFFFFF` | `#0F766E` | **5.47 : 1** | PASS ($\ge 4.5:1$) |
+| **Secondary text (slate-600) on white** | `#475569` | `#FFFFFF` | **7.58 : 1** | PASS ($\ge 4.5:1$) |
+| **Secondary text (slate-600) on page** | `#475569` | `#F6F7F9` | **7.07 : 1** | PASS ($\ge 4.5:1$) |
+| **Placeholder text (slate-500) on white** | `#64748B` | `#FFFFFF` | **4.76 : 1** | PASS ($\ge 4.5:1$) |
+| **Link text (Primary blue) on white** | `#1D4ED8` | `#FFFFFF` | **6.70 : 1** | PASS ($\ge 4.5:1$) |
+| **Teal accent text on white** | `#0F766E` | `#FFFFFF` | **5.47 : 1** | PASS ($\ge 4.5:1$) |
 | **Urgency: Critical** | `#B91C1C` | `#FEF2F2` (8% tint) | **5.91 : 1** | PASS ($\ge 4.5:1$) |
-| **Urgency: High** | `#C2410C` | `#FFF7ED` (8% tint) | **5.00 : 1** | PASS ($\ge 4.5:1$) |
-| **Urgency: Medium** | `#A16207` | `#FEFCE8` (8% tint) | **4.83 : 1** | PASS ($\ge 4.5:1$) |
-| **Urgency: Low** | `#475569` | `#F1F5F9` (8% tint) | **6.74 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Submitted** | `#1D4ED8` | `#EFF6FF` (8% tint) | **6.64 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Under Review** | `#6D28D9` | `#F5F3FF` (8% tint) | **8.92 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Assigned** | `#0369A1` | `#F0F9FF` (8% tint) | **5.04 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: In Progress** | `#115E59` | `#F0FDFA` (8% tint) | **6.12 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Resolved** | `#166534` | `#F0FDF4` (8% tint) | **5.82 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Closed** | `#475569` | `#F8FAFC` (8% tint) | **7.12 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Rejected** | `#991B1B` | `#FEF2F2` (8% tint) | **7.41 : 1** | PASS ($\ge 4.5:1$) |
-| **Status: Reopened** | `#C2410C` | `#FFF7ED` (8% tint) | **5.00 : 1** | PASS ($\ge 4.5:1$) |
-| **Focus Ring on white** | `#1D4ED8` | `#FFFFFF` | **5.23 : 1** | PASS ($\ge 3:1$) |
-| **Focus Ring on page** | `#1D4ED8` | `#F6F7F9` | **4.80 : 1** | PASS ($\ge 3:1$) |
+| **Urgency: High** | `#C2410C` | `#FFF7ED` (8% tint) | **4.88 : 1** | PASS ($\ge 4.5:1$) |
+| **Urgency: Medium** | `#A16207` | `#FEFCE8` (8% tint) | **4.76 : 1** | PASS ($\ge 4.5:1$) |
+| **Urgency: Low** | `#475569` | `#F1F5F9` (8% tint) | **6.92 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Submitted** | `#1D4ED8` | `#EFF6FF` (8% tint) | **6.16 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Under Review** | `#6D28D9` | `#F5F3FF` (8% tint) | **6.48 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Assigned** | `#0369A1` | `#F0F9FF` (8% tint) | **5.57 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: In Progress** | `#115E59` | `#F0FDFA` (8% tint) | **7.27 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Resolved** | `#166534` | `#F0FDF4` (8% tint) | **6.81 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Closed** | `#475569` | `#F8FAFC` (8% tint) | **7.24 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Rejected** | `#991B1B` | `#FEF2F2` (8% tint) | **7.60 : 1** | PASS ($\ge 4.5:1$) |
+| **Status: Reopened** | `#C2410C` | `#FFF7ED` (8% tint) | **4.88 : 1** | PASS ($\ge 4.5:1$) |
+| **Focus Ring on white** | `#1D4ED8` | `#FFFFFF` | **6.70 : 1** | PASS ($\ge 3:1$) |
+| **Focus Ring on page** | `#1D4ED8` | `#F6F7F9` | **6.25 : 1** | PASS ($\ge 3:1$) |
+| **Form control border on white** | `#64748B` | `#FFFFFF` | **4.76 : 1** | PASS ($\ge 3:1$) |
+| **Form control border on page** | `#64748B` | `#F6F7F9` | **4.44 : 1** | PASS ($\ge 3:1$) |
+| **KPI Critical accent bar on white** | `#B91C1C` | `#FFFFFF` | **6.47 : 1** | PASS ($\ge 3:1$) |
+| **KPI Overdue accent bar on white** | `#C2410C` | `#FFFFFF` | **5.18 : 1** | PASS ($\ge 3:1$) |
+| **Selected row left accent bar on white**| `#1D4ED8` | `#FFFFFF` | **6.70 : 1** | PASS ($\ge 3:1$) |
 
-> Every ratio is validated programmatically in `apps/web/src/styles/contrast.test.ts`.
+> Every ratio is validated programmatically in `apps/web/src/styles/contrast.test.ts` using the strict W3C relative luminance linearisation formula.
 
 ---
 
@@ -118,13 +130,29 @@ stateDiagram-v2
 
 ## 6. Sample Inputs for Evaluator Verification
 
-Use the following sample complaints on the `/report` form to test all domain rules and triage pathways:
+Use the following sample complaints on the `/report` form to test all domain rules and triage pathways.
+You can also generate and verify this output anytime via `npm run demo:samples`.
+
+### Evaluator Sample Evaluation Matrix (Generated from Mock Provider & Domain Rules)
+
+| Scenario | Category | Urgency | Department | Outcome Kind | Emergency? | Applied Rules |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| **Pothole near School (Location Boost)** | `pothole` | `critical` | Roads & Infrastructure | `ticket` | No | R4_DUPLICATE_BOOST |
+| **Life-Safety Hazard (112 Emergency Notice)** | `public_hazard` | `critical` | Public Health & Safety | `ticket` | YES (112) | None |
+| **Vague Complaint (Follow-up Question)** | `-` | `-` | None | `follow_up` | No | Follow-up question generated |
+| **Non-Civic Spam (Instant Rejection)** | `-` | `-` | None | `rejected` | No | This request does not appear to be a municipal civic issue. |
+| **Mixed Civic Grievance (Multi-issue Redressal)** | `garbage` | `high` | Sanitation & Waste Management | `ticket` | No | R4_DUPLICATE_BOOST |
+| **Prompt Injection Defense (Maintains Hazard Floor)** | `public_hazard` | `critical` | Public Health & Safety | `ticket` | YES (112) | None |
+
+---
+
+### Step-by-Step Evaluator Test Scenarios
 
 | Scenario | Sample Input Description | Expected Outcome |
 | :--- | :--- | :--- |
 | **Standard Pothole** | `"Deep road crater on 100ft road near Indiranagar bus stop. Vehicles are skidding."` | **Ticket created** at High/Medium urgency, dispatched to Roads & Infrastructure. |
-| **Sensitive Site Proximity** | Select coordinates `lat: 12.9719, lng: 77.6416` (near NPS School) with complaint text: `"Road damage outside school gate during student pickup."` | **Location Boost rule triggered**; urgency raised from Medium to High. |
-| **Emergency Live Hazard** | `"Heavy storm knocked down a live electric wire which caught fire on the flooded street."` | **Immediate Danger** detected; Emergency Notice (112) callout displayed; Urgency set to Critical. |
-| **Ambiguous / Missing Info** | `"Broken stuff on the street."` | **Follow-up question** generated by triage engine requesting specific issue details. |
-| **Non-Civic Matter** | `"My neighbor is playing loud music inside their private apartment flat."` | **Transparently rejected** as private dispute with civil guidance. |
+| **Sensitive Site Proximity** | Select coordinates `lat: 12.9719, lng: 77.6416` (near NPS School) with complaint text: `"Deep dangerous pothole right outside National Public School on 100ft Road, Ward 12. School buses and children are getting stuck."` | **Location Boost rule triggered**; urgency raised. |
+| **Emergency Live Hazard** | `"Live wire hanging from electric pole sparking over pedestrian sidewalk on MG Road, Ward 8. Immediate risk of electrocution!"` | **Immediate Danger** detected; Emergency Notice (112) callout displayed; Urgency set to Critical. |
+| **Ambiguous / Missing Info** | `"road is bad"` | **Follow-up question** generated by triage engine requesting specific issue details. |
+| **Non-Civic Spam** | `"Buy cheap cryptocurrency now at http://spam.crypto.biz and visit http://promo-coins.io for free tokens!"` | **Transparently rejected** without model call. |
 | **Duplicate Support** | File a report for `"pothole on 100ft road"` near Ward 12. | **Similar reports panel** highlights existing complaint; allows 1-click support instead of duplicate creation. |

@@ -27,13 +27,13 @@ Urban citizens frequently encounter civic maintenance issues—such as hazardous
 
 | Criteria | Implementation Strategy | Status |
 | :--- | :--- | :--- |
-| **Code Quality** | Monorepo with npm workspaces, strict TypeScript, ESLint 9 with architectural boundary rules, Prettier, clean layer separation, JSDoc annotations | Scaffolding, Domain, AI, Persistence & Citizen Portal complete (Phases 2.0-2.4) |
-| **Security** | Zero secrets in client/repo (`secrets:check`), Helmet, 20kb JSON cap, Zod input sanitization (control char stripping), constant-time SHA-256 demo authority gate, sliding-window rate limiting, sensitive log redaction | Hardened in Phase 2.3 |
-| **Efficiency** | Same-origin Vercel deployment, lightweight bundle (101.17 kB initial gzip, well under 150 kB budget), zero-dependency pure domain layer, LRU triage cache, fast Vitest execution (420+ tests in <3s) | Optimized in Phases 2.1-2.4 |
-| **Testing** | Unit, integration & a11y testing with Vitest (420+ tests passing, >90% coverage), Supertest for HTTP API, React Testing Library + vitest-axe (0 violations) | >90% coverage in Phases 2.3-2.4 |
-| **Accessibility** | WCAG 2.2 AA compliance: 0 axe-core violations across 14 component states; $\ge 4.5:1$ text contrast & $\ge 3:1$ UI controls mathematically verified; keyboard skip-link; screen-reader live regions; Radix focus traps | Audited & verified in Phase 2.4 |
-| **Google Services Use** | Gemma 4 (Google open model) via Jarvis Labs, Google Gemini API via `@google/genai`, Google Maps Geocoding REST API, Firebase Firestore via `firebase-admin@14.5.1` Spark plan, Google Maps JS API Loader | Implemented & verified in Phases 2.2-2.4 |
-| **Problem Alignment** | Dual citizen/authority portal, deterministic urgency matrix, transparent status lifecycle, community duplicate support, plain-language citizen explanations | Citizen Portal complete in Phase 2.4 |
+| **Code Quality** | Monorepo with npm workspaces, strict TypeScript, ESLint 9 with architectural boundary rules, Prettier, clean layer separation, JSDoc annotations | Scaffolding, Domain, AI, Persistence, Citizen Portal & Authority Dashboard complete (Phases 2.0-2.5) |
+| **Security** | Zero secrets in client/repo (`secrets:check`), Helmet, 20kb JSON cap, Zod input sanitization (control char stripping), constant-time SHA-256 demo authority gate, sliding-window rate limiting, sensitive log redaction | Hardened in Phases 2.3 & 2.5 |
+| **Efficiency** | Same-origin Vercel deployment, lightweight bundle (102.97 kB initial gzip, well under 150 kB budget), zero-dependency pure domain layer, LRU triage cache, fast Vitest execution (470+ tests in <3s) | Optimized across all phases |
+| **Testing** | Unit, integration & a11y testing with Vitest (470+ tests passing, >90% coverage), Supertest for HTTP API, React Testing Library + vitest-axe (0 violations across 21 test scenarios) | >90% coverage in Phases 2.3-2.5 |
+| **Accessibility** | WCAG 2.2 AA compliance: 0 axe-core violations across 21 component states; $\ge 4.5:1$ text contrast & $\ge 3:1$ UI controls mathematically verified; keyboard skip-link; screen-reader live regions; Radix focus traps | Audited & verified in Phase 2.5 |
+| **Google Services Use** | Gemma 4 (Google open model) via Jarvis Labs, Google Gemini API via `@google/genai`, Google Maps Geocoding REST API, Firebase Firestore via `firebase-admin@14.5.1` Spark plan, Google Maps JS API Loader | Implemented & verified in Phases 2.2-2.5 |
+| **Problem Alignment** | Dual citizen/authority portal, operational work queue, KPI cards, AI vs human decision diffs, status transition guards, manual supervisor overrides, plain-language citizen explanations | Complete Dual Portal in Phase 2.5 |
 
 ---
 
@@ -102,6 +102,7 @@ npm run firestore:smoke
 ---
 
 ## 5. Documentation Links
+- **[Evaluator Demo Guide (docs/DEMO.md)](docs/DEMO.md)**: Deterministic test tickets, verification flows for citizen tracking, reopen lifecycle, location boost, and authority dashboard.
 - **[System Architecture (ARCHITECTURE.md)](ARCHITECTURE.md)**: Layering, pure domain core, AI resilience, persistence, frontend architecture, and ESLint boundary rules.
 - **[Citizen Portal & Design System (docs/UI.md)](docs/UI.md)**: Design tokens, contrast table, plain-language dictionary, component catalog, state machine diagram, and evaluator test prompts.
 - **[Accessibility Conformance (docs/ACCESSIBILITY.md)](docs/ACCESSIBILITY.md)**: WCAG 2.2 AA audit results, `vitest-axe` component audit matrix, keyboard journey, and landmark navigation.

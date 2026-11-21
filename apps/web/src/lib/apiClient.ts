@@ -1,7 +1,10 @@
+import { createContext, useContext } from 'react';
 import { z } from 'zod';
 import {
   type SystemStats,
   systemStatsSchema,
+  type SystemMeta,
+  systemMetaSchema,
   type PublicTicketSummary,
   publicTicketSummarySchema,
   type AnalyzeResult,
@@ -64,6 +67,7 @@ export interface ApiClientConfig {
 
 export interface ApiClient {
   getStats(): Promise<SystemStats>;
+  getMeta(): Promise<SystemMeta>;
   getRecentReports(limit?: number): Promise<readonly PublicTicketSummary[]>;
   getWards(): Promise<readonly WardInfo[]>;
   geocode(address: string): Promise<GeocodeResult>;
@@ -72,7 +76,7 @@ export interface ApiClient {
   getTicket(id: string): Promise<PublicTicketView>;
   supportTicket(id: string): Promise<PublicTicketView>;
   reopenTicket(id: string, note?: string): Promise<PublicTicketView>;
-  getAuthorityQueue(query?: TicketQuery): Promise<{
+  getAuthorityQueue(query?: Partial<TicketQuery>): Promise<{
     tickets: readonly AuthorityTicketView[];
     next_cursor?: string;
   }>;
@@ -117,18 +121,43 @@ export class FetchApiClient implements ApiClient {
       headers,
     });
 
-    let json: unknown;
-    try {
-      json = await res.json();
-    } catch {
-      throw new ApiError(res.status, 'parse_error', `Invalid JSON response from ${path}`);
+    let json: unknown = null;
+    let parseFailed = false;
+
+    if (typeof res.text === 'function') {
+      try {
+        const text = await res.text();
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        parseFailed = true;
+      }
+    } else if (typeof res.json === 'function') {
+      try {
+        json = await res.json();
+      } catch {
+        parseFailed = true;
+      }
     }
 
     if (!res.ok) {
-      const errPayload = json as { error?: { code?: string; message?: string } };
-      const code = errPayload?.error?.code || 'unknown_error';
-      const message = errPayload?.error?.message || `HTTP ${res.status}: ${res.statusText}`;
-      throw new ApiError(res.status, code, message);
+      if (json && typeof json === 'object') {
+        const errPayload = json as { error?: { code?: string; message?: string } };
+        const code = errPayload?.error?.code || 'unknown_error';
+        const message = errPayload?.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+        throw new ApiError(res.status, code, message);
+      }
+      if (res.status === 502 || res.status === 503 || res.status === 504 || res.status === 500) {
+        throw new ApiError(
+          res.status,
+          'service_unavailable',
+          `API server is starting up or temporarily unreachable (HTTP ${res.status}). Please try again in a moment.`
+        );
+      }
+      throw new ApiError(res.status, 'http_error', `HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    if (parseFailed || !json) {
+      throw new ApiError(res.status, 'parse_error', `Invalid JSON response from ${path}`);
     }
 
     const envelope = json as { data?: unknown };
@@ -150,6 +179,10 @@ export class FetchApiClient implements ApiClient {
 
   public async getStats(): Promise<SystemStats> {
     return this.request('/api/stats', systemStatsSchema);
+  }
+
+  public async getMeta(): Promise<SystemMeta> {
+    return this.request('/api/meta', systemMetaSchema);
   }
 
   public async getRecentReports(limit = 10): Promise<readonly PublicTicketSummary[]> {
@@ -196,7 +229,7 @@ export class FetchApiClient implements ApiClient {
     });
   }
 
-  public async getAuthorityQueue(query?: TicketQuery): Promise<{
+  public async getAuthorityQueue(query?: Partial<TicketQuery>): Promise<{
     tickets: readonly AuthorityTicketView[];
     next_cursor?: string;
   }> {
@@ -255,20 +288,24 @@ export class FetchApiClient implements ApiClient {
 
 let defaultClient: ApiClient | null = null;
 
+let inMemoryAuth = {
+  role: 'citizen',
+  authorityCode: '',
+};
+
+export function setMemoryAuth(role: string, authorityCode: string): void {
+  inMemoryAuth = { role, authorityCode };
+}
+
 export function getApiClient(): ApiClient {
   if (!defaultClient) {
     defaultClient = new FetchApiClient({
       getAuthHeaders: () => {
-        const headers: Record<string, string> = { 'X-Demo-Role': 'citizen' };
-        try {
-          const role = localStorage.getItem('civicresolve_role') || 'citizen';
-          const code = localStorage.getItem('civicresolve_auth_code') || '';
-          headers['X-Demo-Role'] = role;
-          if (code) {
-            headers['X-Demo-Authority-Code'] = code;
-          }
-        } catch {
-          // localStorage may be unavailable
+        const headers: Record<string, string> = {
+          'X-Demo-Role': inMemoryAuth.role,
+        };
+        if (inMemoryAuth.authorityCode) {
+          headers['X-Demo-Authority-Code'] = inMemoryAuth.authorityCode;
         }
         return headers;
       },
@@ -277,6 +314,13 @@ export function getApiClient(): ApiClient {
   return defaultClient;
 }
 
-export function setApiClient(client: ApiClient): void {
+export function setApiClient(client: ApiClient | null): void {
   defaultClient = client;
+}
+
+export const ApiClientContext = createContext<ApiClient>(getApiClient());
+
+export function useApiClient(): ApiClient {
+  const contextClient = useContext(ApiClientContext);
+  return defaultClient || contextClient;
 }

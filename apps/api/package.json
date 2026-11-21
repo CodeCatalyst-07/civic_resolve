@@ -15,6 +15,7 @@
     "geocode:smoke": "tsx scripts/geocodeSmoke.ts",
     "firestore:smoke": "tsx scripts/firestoreSmoke.ts",
     "seed": "tsx scripts/seed.ts",
+    "demo:samples": "tsx scripts/demoSamples.ts",
     "demo:lifecycle": "tsx scripts/demoLifecycle.ts",
     "test:firestore": "FIRESTORE_EMULATOR_HOST=localhost:8080 vitest run tests/unit/repo/firestore.test.ts"
   },

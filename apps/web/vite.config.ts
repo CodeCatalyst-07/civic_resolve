@@ -16,6 +16,23 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,
+        timeout: 30000,
+        configure: (proxy) => {
+          proxy.on('error', (_err, _req, res) => {
+            if ('writeHead' in res && !res.headersSent) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  error: {
+                    code: 'service_unavailable',
+                    message:
+                      'The CivicResolve API server is starting up or temporarily unreachable. Please retry in a moment.',
+                  },
+                })
+              );
+            }
+          });
+        },
       },
     },
   },

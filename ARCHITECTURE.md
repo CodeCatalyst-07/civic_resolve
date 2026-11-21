@@ -240,7 +240,8 @@ Layout (Semantic header, nav, SkipLink, DemoBanner, RoleSwitcher, main, footer)
   │                        └── Step 4: StepConfirmation (Crockford Base32 8-char code receipt, CopyButton)
   ├── /track          -> TrackPage (Search & validation input for Crockford Base32 ticket codes)
   ├── /track/:id      -> TrackPage (Public allowlist DTO view, Timeline, Support Button, ReopenDialog)
-  └── /authority      -> AuthorityPage (Accessible placeholder gate with role & demo code verification)
+  ├── /authority      -> AuthorityPage (AuthorityGate when citizen; AuthorityQueuePage when authority)
+  └── /authority/map  -> AuthorityMapPage (Spatial dispatch overview with shape + color markers)
 ```
 
 ### Multi-Step State Machine Reducer (`features/citizen/state/reportFlow.ts`)
@@ -256,10 +257,25 @@ The citizen submission journey is governed by a pure, deterministic reducer:
 
 ### Accessibility Architecture (WCAG 2.2 AA)
 - **Token Mathematics**: Tinted background tokens for all 4 urgency levels and 8 statuses are verified in `apps/web/src/styles/contrast.test.ts` to guarantee $\ge 4.5:1$ contrast against body ink and tinted backgrounds.
-- **Automated Axe Audits**: 14 distinct component and page permutations verified in `apps/web/src/test/a11y.test.tsx` with **0 violations**.
+- **Automated Axe Audits**: 21 distinct component and page permutations verified in `apps/web/src/test/a11y.test.tsx` with **0 violations**.
 - **Keyboard Journey**: End-to-end keyboard tab/enter traversal verified with `@testing-library/user-event` in `keyboardJourney.test.tsx`.
 - **Screen Reader Polish**: Character counters use `aria-live="polite"`; form submission errors render into an accessible `ErrorSummary` with `role="alert"`; skip-link targets `#main-content`.
 
 ### Performance & Bundle Size Budget
-- Route-level code-splitting with `React.lazy` and `Suspense` ensures the initial JavaScript bundle is only **101.17 kB gzip** (under the 150 kB budget).
-- The Google Maps JS API is lazily loaded on-demand only when Step 2 (`StepLocation`) mounts, falling back gracefully to coordinate/ward inputs when no API key is provided.
+- Route-level code-splitting with `React.lazy` and `Suspense` ensures the initial JavaScript bundle is only **102.97 kB gzip** (under the 150 kB budget).
+- The Google Maps JS API is lazily loaded on-demand only when Step 2 (`StepLocation`) or `/authority/map` mounts, falling back gracefully to coordinate/ward inputs when no API key is provided.
+
+---
+
+## 10. Authority Dashboard Architecture (Phase 2.5)
+
+### Component & Hook Architecture
+- **`AuthorityGate`**: Enforces client-side role guard. When active role is Citizen, renders educational gate card and executes zero authority API calls.
+- **`AuthorityNav`**: Quiet underlined sub-navigation tabs ("Work queue" and optional "Map").
+- **`KpiTiles`**: Real-time KPI summaries for open, critical, overdue, and 7-day resolved tickets with instant filter toggles and active state styling.
+- **`FilterBar`**: Multi-dimensional search filters (Status, Category, Urgency, Ward, Overdue toggle) synchronized bidirectionally with URL query parameters via `toSearchParams` and `fromSearchParams`.
+- **`QueueTable`**: Semantic HTML table (`<caption>`, `<th scope="col">`, tabular numerals) with row keyboard selection (`Enter`), highlight animations, and infinite cursor pagination with polite screen-reader announcements.
+- **`TicketDetailSheet`**: Radix Dialog slide-over right-side panel (520px) displaying full investigation metadata, AI vs decision comparison table (`describeDecisionChange`), duplicate counts, transition-guarded lifecycle status updates (requiring resolution notes), supervisor overrides, and chronological audit trail.
+- **`AuthorityMapPage`**: Spatial overview plotting up to 100 filtered tickets with distinctive shape + color urgency pins, interactive InfoWindows, and accessible text alternatives.
+- **Pure Utility Layer**: Deterministic modules `filters.ts`, `formatters.ts` (`formatTarget`, `formatConfidence`, `describeDecisionChange`), and `transitions.ts` backed by 100% offline unit tests.
+

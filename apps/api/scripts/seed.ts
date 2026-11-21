@@ -102,6 +102,59 @@ async function main(): Promise<void> {
     statusSum += count;
   }
   console.log(`\nStatus Count Sum: ${statusSum} / ${result.value.inserted} (exact match: ${statusSum === result.value.inserted})`);
+
+  // Print Evaluator Demo Tickets Table
+  const allTicketsRes = await repo.query({ limit: 100 });
+  if (allTicketsRes.ok) {
+    const tickets = allTicketsRes.value.tickets;
+
+    const demoItems = [
+      {
+        scenario: 'Emergency Life-Safety Hazard (112 notice)',
+        ticket: tickets.find((t) => t.final_decision.emergency_notice),
+        detail: 'Urgency Critical; 112 emergency callout active',
+      },
+      {
+        scenario: 'Duplicate Cluster Primary (4 duplicates)',
+        ticket: tickets.find((t) => t.duplicate_count === 4),
+        detail: 'Indiranagar School pothole cluster; duplicate count 4',
+      },
+      {
+        scenario: 'Overdue Grievance (SLA Exceeded & Escalated)',
+        ticket: tickets.find((t) => t.escalated && t.status !== 'resolved' && t.status !== 'closed'),
+        detail: 'Whitefield streetlights; SLA 72h exceeded, escalated',
+      },
+      {
+        scenario: 'Reopened Grievance (Citizen Reopened)',
+        ticket: tickets.find((t) => t.status === 'reopened'),
+        detail: 'Sector 1 road trench; reopen audit event recorded',
+      },
+      {
+        scenario: 'Resolved Grievance (Eligible for Citizen Reopen)',
+        ticket: tickets.find((t) => t.status === 'resolved'),
+        detail: 'Defense Colony pothole; ready to test citizen reopen',
+      },
+      {
+        scenario: 'Rejected Matter (Non-Civic Jurisdictional Outlier)',
+        ticket: tickets.find((t) => t.status === 'rejected'),
+        detail: 'Private billboard dispute; civil guidance provided',
+      },
+    ];
+
+    console.log('\n========================================================================');
+    console.log('Evaluator Demo Tickets (Deterministic IDs for UI & API Testing)');
+    console.log('========================================================================\n');
+    console.log('| Scenario | Ticket ID | Status | Urgency | Category | Verification Details |');
+    console.log('| :--- | :--- | :--- | :--- | :--- | :--- |');
+    for (const item of demoItems) {
+      if (item.ticket) {
+        console.log(
+          `| **${item.scenario}** | \`${item.ticket.id}\` | \`${item.ticket.status}\` | \`${item.ticket.urgency}\` | \`${item.ticket.category}\` | ${item.detail} |`
+        );
+      }
+    }
+    console.log('\n');
+  }
 }
 
 main().catch((err) => {

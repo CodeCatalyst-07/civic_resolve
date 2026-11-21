@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 /**
- * Calculates WCAG 2.1 relative luminance for an sRGB hexadecimal color code.
+ * Calculates WCAG 2.x relative luminance for an sRGB hexadecimal color code.
+ * Follows exact W3C specification with sRGB linearisation (IEC 61966-2-1).
  * Reference: https://www.w3.org/WAI/GL/wiki/Relative_luminance
  */
 export function getLuminance(hex: string): number {
@@ -11,7 +12,7 @@ export function getLuminance(hex: string): number {
   const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
 
   const toLinear = (c: number): number => {
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   };
 
   const rLinear = toLinear(r);
@@ -22,7 +23,7 @@ export function getLuminance(hex: string): number {
 }
 
 /**
- * Calculates WCAG 2.1 contrast ratio between two hexadecimal colors.
+ * Calculates WCAG 2.x contrast ratio between two hexadecimal colors.
  * Contrast ratio is defined as (L1 + 0.05) / (L2 + 0.05), where L1 is the lighter luminance.
  */
 export function getContrastRatio(hex1: string, hex2: string): number {
@@ -33,13 +34,34 @@ export function getContrastRatio(hex1: string, hex2: string): number {
   return Number(((lighter + 0.05) / (darker + 0.05)).toFixed(2));
 }
 
-describe('Design System Contrast Ratios (WCAG 2.1 AA Compliance)', () => {
+describe('Design System Contrast Ratios (WCAG 2.x Precision & Reference Validation)', () => {
+  describe('Mathematical Reference Assertions', () => {
+    it('verifies black on white produces an exact 21:1 ratio', () => {
+      expect(getContrastRatio('#000000', '#FFFFFF')).toBe(21.0);
+    });
+
+    it('verifies #767676 on white produces the standard ~4.54:1 ratio', () => {
+      const ratio = getContrastRatio('#767676', '#FFFFFF');
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+      expect(ratio).toBeLessThanOrEqual(4.56);
+    });
+
+    it('verifies white on white produces an exact 1:1 ratio', () => {
+      expect(getContrastRatio('#FFFFFF', '#FFFFFF')).toBe(1.0);
+    });
+  });
+
   const pairs = [
-    // Core brand and body text
+    // Core brand and body text (WCAG AA >= 4.5:1)
     { name: 'Ink text on Surface (white)', text: '#0F172A', bg: '#FFFFFF', minRatio: 4.5 },
     { name: 'Ink text on Page background', text: '#0F172A', bg: '#F6F7F9', minRatio: 4.5 },
     { name: 'White text on Primary Civic Blue', text: '#FFFFFF', bg: '#1D4ED8', minRatio: 4.5 },
     { name: 'White text on Accent Teal', text: '#FFFFFF', bg: '#0F766E', minRatio: 4.5 },
+    { name: 'Secondary text (slate-600) on white', text: '#475569', bg: '#FFFFFF', minRatio: 4.5 },
+    { name: 'Secondary text (slate-600) on page background', text: '#475569', bg: '#F6F7F9', minRatio: 4.5 },
+    { name: 'Placeholder text (slate-500) on white', text: '#64748B', bg: '#FFFFFF', minRatio: 4.5 },
+    { name: 'Link text (Primary blue) on white', text: '#1D4ED8', bg: '#FFFFFF', minRatio: 4.5 },
+    { name: 'Teal accent text on white', text: '#0F766E', bg: '#FFFFFF', minRatio: 4.5 },
 
     // Urgency badges (text on tinted ~8% background)
     { name: 'Urgency Critical on tinted bg', text: '#B91C1C', bg: '#FEF2F2', minRatio: 4.5 },
@@ -57,9 +79,20 @@ describe('Design System Contrast Ratios (WCAG 2.1 AA Compliance)', () => {
     { name: 'Status Rejected on tinted bg', text: '#991B1B', bg: '#FEF2F2', minRatio: 4.5 },
     { name: 'Status Reopened on tinted bg', text: '#C2410C', bg: '#FFF7ED', minRatio: 4.5 },
 
-    // UI interactive components (min 3:1 ratio)
+    // Authority dashboard UI pairs
+    { name: 'Selected table row text on tinted bg', text: '#0F172A', bg: '#EFF6FF', minRatio: 4.5 },
+    { name: 'Overdue tag text on tinted orange bg', text: '#C2410C', bg: '#FFF7ED', minRatio: 4.5 },
+    { name: 'Change marker automatic text on blue tint', text: '#1D4ED8', bg: '#EFF6FF', minRatio: 4.5 },
+    { name: 'Change marker staff text on teal tint', text: '#0F766E', bg: '#F0FDFA', minRatio: 4.5 },
+
+    // UI interactive controls & borders (WCAG 1.4.11 Non-text contrast >= 3.0:1)
     { name: 'Focus ring on white surface', text: '#1D4ED8', bg: '#FFFFFF', minRatio: 3.0 },
     { name: 'Focus ring on page background', text: '#1D4ED8', bg: '#F6F7F9', minRatio: 3.0 },
+    { name: 'Form control border (slate-500) on white surface', text: '#64748B', bg: '#FFFFFF', minRatio: 3.0 },
+    { name: 'Form control border (slate-500) on page background', text: '#64748B', bg: '#F6F7F9', minRatio: 3.0 },
+    { name: 'KPI Critical accent bar on white card', text: '#B91C1C', bg: '#FFFFFF', minRatio: 3.0 },
+    { name: 'KPI Overdue accent bar on white card', text: '#C2410C', bg: '#FFFFFF', minRatio: 3.0 },
+    { name: 'Table selected row left accent bar on white', text: '#1D4ED8', bg: '#FFFFFF', minRatio: 3.0 },
   ];
 
   for (const pair of pairs) {

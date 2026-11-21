@@ -90,7 +90,7 @@ export function TrackPage(): React.JSX.Element {
               }}
               placeholder={STRINGS.track.lookupPlaceholder}
               maxLength={11}
-              className="w-full px-3 py-2 text-sm font-mono uppercase bg-page border border-border rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-primary"
+              className="w-full px-3 py-2 text-sm font-mono uppercase bg-page border border-slate-500 rounded-lg text-ink placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary"
               aria-invalid={!!formError}
               aria-describedby={formError ? 'track-lookup-error' : undefined}
             />

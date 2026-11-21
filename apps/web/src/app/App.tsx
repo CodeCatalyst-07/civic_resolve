@@ -19,6 +19,9 @@ const TrackPage = lazy(() =>
 const AuthorityPage = lazy(() =>
   import('./pages/AuthorityPage.js').then((m) => ({ default: m.AuthorityPage }))
 );
+const AuthorityMapPage = lazy(() =>
+  import('../features/authority/pages/AuthorityMapPage.js').then((m) => ({ default: m.AuthorityMapPage }))
+);
 
 function PageLoadingFallback(): React.JSX.Element {
   return (
@@ -77,6 +80,14 @@ export function App(): React.JSX.Element {
                 element={
                   <Suspense fallback={<PageLoadingFallback />}>
                     <AuthorityPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="authority/map"
+                element={
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <AuthorityMapPage />
                   </Suspense>
                 }
               />

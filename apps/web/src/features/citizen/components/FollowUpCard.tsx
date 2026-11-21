@@ -49,7 +49,7 @@ export const FollowUpCard: React.FC<FollowUpCardProps> = ({
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Type your clarification here..."
-          className="w-full p-3 text-sm bg-surface border border-border rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-primary"
+          className="w-full p-3 text-sm bg-surface border border-slate-500 rounded-lg text-ink placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary"
           required
         />
 

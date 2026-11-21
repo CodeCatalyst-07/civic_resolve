@@ -51,6 +51,7 @@ export { computeDueAt, isOverdue, escalateIfOverdue } from './sla.js';
 export {
   transitionTicket,
   LEGAL_TRANSITIONS,
+  AUTHORITY_TRANSITIONS,
   type TransitionContext,
 } from './status.js';
 

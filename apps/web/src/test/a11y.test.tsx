@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Category, Urgency, Status, Role, type PublicTicketView } from '@civicresolve/shared';
+import { Category, Urgency, Status, Role, type PublicTicketView, type AuthorityTicketView } from '@civicresolve/shared';
 import { RoleProvider } from '../hooks/useRole.js';
 import { UrgencyBadge } from '../components/UrgencyBadge.js';
 import { StatusPill } from '../components/StatusPill.js';
@@ -20,6 +20,14 @@ import { StepReview } from '../features/citizen/components/StepReview.js';
 import { StepConfirmation } from '../features/citizen/components/StepConfirmation.js';
 import { TrackView } from '../features/citizen/components/TrackView.js';
 import { ReopenDialog } from '../features/citizen/components/ReopenDialog.js';
+import { FollowUpCard } from '../features/citizen/components/FollowUpCard.js';
+import { RejectedCard } from '../features/citizen/components/RejectedCard.js';
+import { SimilarReportsPanel } from '../features/citizen/components/SimilarReportsPanel.js';
+import { AuthorityGate } from '../features/authority/components/AuthorityGate.js';
+import { KpiTiles } from '../features/authority/components/KpiTiles.js';
+import { FilterBar } from '../features/authority/components/FilterBar.js';
+import { QueueTable } from '../features/authority/components/QueueTable.js';
+import { TicketDetailSheet } from '../features/authority/components/TicketDetailSheet.js';
 import { RoleDialog } from '../components/RoleDialog.js';
 
 function createWrapper() {
@@ -270,6 +278,170 @@ describe('Automated WCAG 2.2 AA Accessibility Audits (vitest-axe)', () => {
     const wrapper = createWrapper();
     const { baseElement } = render(
       <RoleDialog open={true} onOpenChange={() => {}} />,
+      { wrapper }
+    );
+    expect(await axe(baseElement)).toHaveNoViolations();
+  });
+
+  it('verifies FollowUpCard has no axe violations in isolation', async () => {
+    const { container } = render(
+      <FollowUpCard
+        question="Which road landmark is this pothole near?"
+        round={1}
+        onAnswer={() => {}}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies RejectedCard has no axe violations in isolation', async () => {
+    const { container } = render(
+      <RejectedCard
+        reason="Private commercial boundary dispute"
+        guidance="Please contact your local resident association or civil court."
+        emergencyNotice={false}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies SimilarReportsPanel has no axe violations in isolation', async () => {
+    const { container } = render(
+      <SimilarReportsPanel
+        similarReports={[
+          {
+            id: 'CR-11111111',
+            category: Category.POTHOLE,
+            urgency: Urgency.HIGH,
+            status: Status.SUBMITTED,
+            summary: 'Similar road pothole',
+            duplicate_count: 2,
+            created_at: '2026-11-20T08:00:00.000Z',
+          },
+        ]}
+        onSupport={() => {}}
+        onSubmitAnyway={() => {}}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies AuthorityGate has no axe violations in citizen mode', async () => {
+    const wrapper = createWrapper();
+    const { container } = render(<AuthorityGate />, { wrapper });
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies KpiTiles has no axe violations', async () => {
+    const { container } = render(
+      <KpiTiles
+        stats={{
+          open: 12,
+          critical_open: 2,
+          overdue: 1,
+          resolved_last_7_days: 14,
+          resolved: 45,
+          median_resolution_hours: 24,
+        }}
+        isLoading={false}
+        filters={{}}
+        onFilterChange={() => {}}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies FilterBar has no axe violations', async () => {
+    const wrapper = createWrapper();
+    const { container } = render(
+      <FilterBar filters={{}} onFilterChange={() => {}} />,
+      { wrapper }
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('verifies QueueTable has no axe violations across states', async () => {
+    const mockAuthorityTicket: AuthorityTicketView = {
+      ...mockTicket,
+      description: 'Dangerous road crater outside NPS School.',
+      location: {
+        lat: 12.9719,
+        lng: 77.6416,
+        address: '100ft Road, Indiranagar',
+      },
+      ai_suggestion: {
+        is_civic_issue: true,
+        category: Category.POTHOLE,
+        urgency: Urgency.MEDIUM,
+        safety_critical: false,
+        confidence: 0.95,
+        summary: 'Pothole on 100ft road',
+        reasons: ['Deep road hazard'],
+        missing_info: [],
+      },
+      needs_manual_triage: false,
+      escalated: false,
+      reopen_count: 0,
+      version: 1,
+    };
+
+    // 1. Loaded state
+    const { container: loadedContainer } = render(
+      <QueueTable
+        tickets={[mockAuthorityTicket]}
+        isLoading={false}
+        isError={false}
+        selectedTicketId={null}
+        onSelectTicket={() => {}}
+        onClearFilters={() => {}}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        onLoadMore={() => {}}
+      />
+    );
+    expect(await axe(loadedContainer)).toHaveNoViolations();
+
+    // 2. Empty state
+    const { container: emptyContainer } = render(
+      <QueueTable
+        tickets={[]}
+        isLoading={false}
+        isError={false}
+        selectedTicketId={null}
+        onSelectTicket={() => {}}
+        onClearFilters={() => {}}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        onLoadMore={() => {}}
+      />
+    );
+    expect(await axe(emptyContainer)).toHaveNoViolations();
+
+    // 3. Error state
+    const { container: errorContainer } = render(
+      <QueueTable
+        tickets={[]}
+        isLoading={false}
+        isError={true}
+        selectedTicketId={null}
+        onSelectTicket={() => {}}
+        onClearFilters={() => {}}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        onLoadMore={() => {}}
+      />
+    );
+    expect(await axe(errorContainer)).toHaveNoViolations();
+  });
+
+  it('verifies TicketDetailSheet slide-over sheet has no axe violations when open', async () => {
+    const wrapper = createWrapper();
+    const { baseElement } = render(
+      <TicketDetailSheet
+        ticketId={mockTicket.id}
+        open={true}
+        onOpenChange={() => {}}
+      />,
       { wrapper }
     );
     expect(await axe(baseElement)).toHaveNoViolations();

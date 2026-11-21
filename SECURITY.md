@@ -17,6 +17,8 @@ CivicResolve implements defense-in-depth across the API, persistence, AI process
   The internal structured logger (`apps/api/src/services/logger.ts`) sanitizes logged arguments. Objects containing keys like `key`, `secret`, `token`, `password`, `auth`, `credential` are redacted. Raw complaint text, API keys, and model prompt outputs are never written to server logs.
 - **Client Sanitization**:
   The web frontend (`apps/web`) receives no secrets. The only public environment variable is `VITE_GOOGLE_MAPS_BROWSER_KEY`, restricted by HTTP Referrer in the Google Cloud Console.
+- **Browser Permissions-Policy**:
+  In `vercel.json`, HTTP response headers configure `Permissions-Policy: camera=(), microphone=(), geolocation=(self)`. Hardware sensors (camera, microphone) are disabled completely, while the browser Geolocation API is constrained strictly to the first-party application origin (`self`) to allow opt-in citizen location pinning while preventing unauthorized cross-origin or third-party iframe access.
 
 ---
 

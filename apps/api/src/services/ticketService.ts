@@ -695,12 +695,26 @@ export class TicketService {
           : resolutionDurationsHours[mid]!;
     }
 
+    // Compute resolved tickets in the last 7 days
+    const sevenDaysAgoMs = this.now().getTime() - 7 * 24 * 3600 * 1000;
+    let resolvedLast7Days = 0;
+    for (const t of resolvedTickets) {
+      const resolvedEvt = t.events.find((e) => e.status === Status.RESOLVED);
+      const resolvedAtMs = resolvedEvt
+        ? new Date(resolvedEvt.at).getTime()
+        : new Date(t.created_at).getTime();
+      if (resolvedAtMs >= sevenDaysAgoMs) {
+        resolvedLast7Days++;
+      }
+    }
+
     return ok({
       open: openTickets.length,
       resolved: resolvedTickets.length,
       critical_open: criticalOpen,
       overdue,
       median_resolution_hours: Math.round(medianHours * 10) / 10,
+      resolved_last_7_days: resolvedLast7Days,
     });
   }
 }

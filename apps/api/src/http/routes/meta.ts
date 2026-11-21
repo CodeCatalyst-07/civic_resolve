@@ -6,13 +6,13 @@ import {
   ROLES,
   DEPARTMENTS,
 } from '@civicresolve/shared';
-import { DEPARTMENT_METADATA, DOMAIN_CONFIG } from '../../domain/index.js';
+import { DEPARTMENT_METADATA, DOMAIN_CONFIG, AUTHORITY_TRANSITIONS } from '../../domain/index.js';
 
 export function createMetaRouter(): Router {
   const router = Router();
 
   /**
-   * Metadata endpoint exposing domain taxonomies, department display names, and SLA deadlines.
+   * Metadata endpoint exposing domain taxonomies, department display names, SLA deadlines, and authority status transitions.
    */
   router.get('/', (_req, res) => {
     const departments = DEPARTMENTS.map((id) => ({
@@ -28,6 +28,7 @@ export function createMetaRouter(): Router {
       roles: ROLES,
       departments,
       slaHours: DOMAIN_CONFIG.slaHours,
+      status_transitions: AUTHORITY_TRANSITIONS,
     });
   });
 

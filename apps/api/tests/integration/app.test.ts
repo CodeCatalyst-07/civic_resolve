@@ -52,6 +52,10 @@ describe('API Integration Tests', () => {
     expect(res.body).toHaveProperty('roles');
     expect(res.body).toHaveProperty('departments');
     expect(res.body).toHaveProperty('slaHours');
+    expect(res.body).toHaveProperty('status_transitions');
+    expect(res.body.status_transitions.submitted).toContain('under_review');
+    expect(res.body.status_transitions.resolved).toContain('closed');
+    expect(res.body.status_transitions.resolved).not.toContain('reopened');
 
     expect(Array.isArray(res.body.categories)).toBe(true);
     expect(res.body.categories).toContain('pothole');
@@ -192,6 +196,7 @@ describe('API Integration Tests', () => {
     expect(res.body.data).toHaveProperty('resolved');
     expect(res.body.data).toHaveProperty('critical_open');
     expect(res.body.data).toHaveProperty('median_resolution_hours');
+    expect(res.body.data).toHaveProperty('resolved_last_7_days');
   });
 
   // 6. Authority Role & Security Gate

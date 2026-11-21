@@ -86,7 +86,7 @@ export const ReopenDialog: React.FC<ReopenDialogProps> = ({
                   if (error) setError(null);
                 }}
                 placeholder={STRINGS.track.reopenNotePlaceholder}
-                className="w-full p-2.5 text-xs rounded-md border border-border bg-surface text-ink leading-relaxed focus-visible:outline-2 focus-visible:outline-primary"
+                className="w-full p-2.5 text-xs rounded-md border border-slate-500 bg-surface text-ink placeholder:text-slate-500 leading-relaxed focus-visible:outline-2 focus-visible:outline-primary"
                 required
               />
               <FieldError error={error} />

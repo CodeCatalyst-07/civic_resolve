@@ -95,7 +95,7 @@ export const StepLocation: React.FC<StepLocationProps> = ({
             id="ward-select"
             value={value.ward || ''}
             onChange={(e) => onChange({ ward: e.target.value || undefined })}
-            className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-primary"
+            className="w-full px-3 py-2 text-sm bg-surface border border-slate-500 rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-primary"
           >
             <option value="">{STRINGS.report.locationWardPlaceholder}</option>
             {wardOptions.map((wardName, idx) => (
@@ -118,7 +118,7 @@ export const StepLocation: React.FC<StepLocationProps> = ({
             onChange={(e) => onChange({ address: e.target.value || undefined })}
             placeholder={STRINGS.report.locationAddressPlaceholder}
             maxLength={200}
-            className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-ink focus-visible:outline-2 focus-visible:outline-primary"
+            className="w-full px-3 py-2 text-sm bg-surface border border-slate-500 rounded-lg text-ink placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary"
           />
         </div>
 

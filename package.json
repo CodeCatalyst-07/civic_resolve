@@ -20,6 +20,7 @@
     "lint": "eslint .",
     "secrets:check": "node scripts/secretsCheck.mjs",
     "seed": "npm run seed --workspace=@civicresolve/api --",
+    "demo:samples": "npm run demo:samples --workspace=@civicresolve/api",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -41,6 +41,8 @@ import {
   systemStatsSchema,
   analyzeResultSchema,
   submitResultSchema,
+  systemMetaSchema,
+  statusTransitionsSchema,
 } from './index.js';
 
 describe('stripControlCharacters', () => {
@@ -634,8 +636,10 @@ describe('Phase 2.3 Shared DTO and Request Schemas', () => {
       critical_open: 2,
       overdue: 1,
       median_resolution_hours: 18.5,
+      resolved_last_7_days: 6,
     });
     expect(stats.open).toBe(12);
+    expect(stats.resolved_last_7_days).toBe(6);
 
     const analyze = analyzeResultSchema.parse({
       outcome: {
@@ -676,5 +680,35 @@ describe('Phase 2.3 Shared DTO and Request Schemas', () => {
       },
     });
     expect(submit.ticket).toBeNull();
+
+    // Verify systemStatsSchema with resolved_last_7_days
+    const systemStatsParsed = systemStatsSchema.parse({
+      open: 10,
+      resolved: 20,
+      critical_open: 2,
+      overdue: 1,
+      median_resolution_hours: 24.5,
+      resolved_last_7_days: 7,
+    });
+    expect(systemStatsParsed.resolved_last_7_days).toBe(7);
+
+    // Verify systemMetaSchema & statusTransitionsSchema
+    const meta = systemMetaSchema.parse({
+      categories: [Category.POTHOLE],
+      urgencies: [Urgency.MEDIUM],
+      statuses: [Status.SUBMITTED],
+      roles: [Role.AUTHORITY],
+      departments: [{ id: 'roads', displayName: 'Roads', localAuthority: 'BBMP Roads' }],
+      slaHours: { [Urgency.CRITICAL]: 6, [Urgency.HIGH]: 24, [Urgency.MEDIUM]: 72, [Urgency.LOW]: 168 },
+      status_transitions: {
+        submitted: [Status.UNDER_REVIEW, Status.REJECTED],
+      },
+    });
+    expect(meta.status_transitions[Status.SUBMITTED]).toContain(Status.UNDER_REVIEW);
+
+    const transitions = statusTransitionsSchema.parse({
+      submitted: [Status.UNDER_REVIEW, Status.REJECTED],
+    });
+    expect(transitions[Status.SUBMITTED]).toContain(Status.UNDER_REVIEW);
   });
 });

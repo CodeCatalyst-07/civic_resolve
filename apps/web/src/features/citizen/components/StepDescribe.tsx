@@ -91,8 +91,8 @@ export const StepDescribe: React.FC<StepDescribeProps> = ({ value, onChange, onN
               if (error) setError(null);
             }}
             placeholder={STRINGS.report.describePlaceholder}
-            className={`w-full p-3 text-sm bg-surface rounded-lg border leading-relaxed focus-visible:outline-2 focus-visible:outline-primary ${
-              error ? 'border-red-500 bg-red-50/20' : 'border-border'
+            className={`w-full p-3 text-sm bg-surface rounded-lg border leading-relaxed placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary ${
+              error ? 'border-red-500 bg-red-50/20' : 'border-slate-500'
             }`}
             aria-describedby="describe-help describe-counter describe-error"
             aria-invalid={!!error}

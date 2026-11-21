@@ -4,12 +4,13 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RoleProvider } from '../hooks/useRole.js';
+import { RoleProvider, RoleContext } from '../hooks/useRole.js';
 import { Layout } from '../app/Layout.js';
 import { ReportPage } from '../app/pages/ReportPage.js';
 import { HomePage } from '../app/pages/HomePage.js';
 import { TrackPage } from '../app/pages/TrackPage.js';
-import { Category, Urgency, Status } from '@civicresolve/shared';
+import { AuthorityPage } from '../app/pages/AuthorityPage.js';
+import { Category, Urgency, Status, Role } from '@civicresolve/shared';
 import * as apiClientModule from '../lib/apiClient.js';
 
 describe('Citizen End-to-End Keyboard Journey', () => {
@@ -20,6 +21,22 @@ describe('Citizen End-to-End Keyboard Journey', () => {
       critical_open: 2,
       overdue: 1,
       median_resolution_hours: 24,
+      resolved_last_7_days: 10,
+    }),
+    getMeta: vi.fn().mockResolvedValue({
+      categories: ['pothole', 'garbage'],
+      urgencies: ['low', 'medium', 'high', 'critical'],
+      statuses: ['submitted', 'under_review', 'assigned', 'in_progress', 'resolved', 'closed', 'rejected', 'reopened'],
+      roles: ['citizen', 'authority'],
+      departments: [{ id: 'roads', displayName: 'Roads & Infrastructure', localAuthority: 'BBMP' }],
+      slaHours: { low: 168, medium: 96, high: 48, critical: 24 },
+      status_transitions: {
+        submitted: ['under_review', 'rejected'],
+        under_review: ['assigned', 'rejected'],
+        assigned: ['in_progress'],
+        in_progress: ['resolved'],
+        resolved: ['closed'],
+      },
     }),
     getRecentReports: vi.fn().mockResolvedValue([]),
     getWards: vi.fn().mockResolvedValue([
@@ -176,5 +193,101 @@ describe('Citizen End-to-End Keyboard Journey', () => {
     // Copy button is present and focusable
     const copyBtn = screen.getByRole('button', { name: /copy CR-7X2K9M4P/i });
     expect(copyBtn).toBeInTheDocument();
+  });
+
+  it('navigates authority work queue table and opens detail sheet via Enter, then closes with Escape', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    const mockAuthTicket = {
+      id: 'CR-88888888',
+      status: Status.SUBMITTED,
+      category: Category.POTHOLE,
+      urgency: Urgency.HIGH,
+      department: 'Roads & Infrastructure',
+      summary: 'Dangerous pothole outside school',
+      ward: 'Ward 12 - Indiranagar',
+      description: 'Dangerous pothole outside school gate on 100ft road.',
+      location: { address: '100ft Road, Indiranagar', lat: 12.9719, lng: 77.6416 },
+      created_at: '2026-11-21T10:00:00.000Z',
+      due_at: '2026-11-23T10:00:00.000Z',
+      overdue: false,
+      duplicate_count: 2,
+      reasons: ['High traffic road'],
+      applied_rules: [],
+      timeline: [
+        {
+          id: 'evt-1',
+          status: Status.SUBMITTED,
+          role: Role.CITIZEN,
+          at: '2026-11-21T10:00:00.000Z',
+        },
+      ],
+      emergency_notice: false,
+      ai_suggestion: {
+        is_civic_issue: true,
+        category: Category.POTHOLE,
+        urgency: Urgency.MEDIUM,
+        confidence: 0.95,
+        summary: 'Pothole on 100ft road',
+        reasons: ['Pothole detected'],
+        safety_critical: false,
+        missing_info: [],
+      },
+      needs_manual_triage: false,
+      escalated: false,
+      reopen_count: 0,
+      version: 1,
+    };
+
+    mockClient.getAuthorityQueue.mockResolvedValue({
+      tickets: [mockAuthTicket],
+      next_cursor: undefined,
+    });
+    mockClient.getAuthorityTicket.mockResolvedValue(mockAuthTicket);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RoleContext.Provider
+          value={{
+            role: Role.AUTHORITY,
+            isAuthority: true,
+            authorityCode: 'test-code',
+            setRole: () => {},
+            setAuthorityCode: () => {},
+          }}
+        >
+          <MemoryRouter initialEntries={['/authority']}>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route path="authority" element={<AuthorityPage />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </RoleContext.Provider>
+      </QueryClientProvider>
+    );
+
+    // Verify row rendered in table
+    const row = await screen.findByTestId('queue-row-CR-88888888');
+    expect(row).toBeInTheDocument();
+
+    // Focus row and press Enter
+    row.focus();
+    expect(row).toHaveFocus();
+    await user.keyboard('{Enter}');
+
+    // Verify slide-over sheet dialog opens
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getAllByText('CR-88888888').length).toBeGreaterThanOrEqual(1);
+
+    // Press Escape to dismiss sheet
+    await user.keyboard('{Escape}');
+
+    // Verify dialog is closed
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

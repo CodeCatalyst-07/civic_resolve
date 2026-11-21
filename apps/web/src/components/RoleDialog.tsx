@@ -103,15 +103,15 @@ export const RoleDialog: React.FC<RoleDialogProps> = ({ open, onOpenChange }) =>
                 </label>
                 <input
                   id="auth-code-input"
-                  type="text"
+                  type="password"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="secret-authority-pass-99"
-                  className="w-full px-3 py-1.5 text-xs rounded-md border border-border bg-surface text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                  placeholder="Enter authority access code"
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-500 bg-surface text-ink placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary"
                   required
                 />
                 <p className="text-[10px] text-slate-500">
-                  Default demo code: <code className="bg-slate-200 px-1 py-0.5 rounded text-ink font-mono">secret-authority-pass-99</code>
+                  Enter the access code configured in your server environment.
                 </p>
               </div>
             )}

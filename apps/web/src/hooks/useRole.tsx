@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { Role } from '@civicresolve/shared';
+import { setMemoryAuth } from '../lib/apiClient.js';
 
 export interface RoleContextValue {
   role: Role;
@@ -12,8 +13,6 @@ export interface RoleContextValue {
 export const RoleContext = createContext<RoleContextValue | undefined>(undefined);
 
 const ROLE_STORAGE_KEY = 'civicresolve_role';
-const CODE_STORAGE_KEY = 'civicresolve_auth_code';
-const DEFAULT_AUTH_CODE = 'secret-authority-pass-99';
 
 export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [role, setRoleState] = useState<Role>(() => {
@@ -25,16 +24,20 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   });
 
-  const [authorityCode, setAuthorityCodeState] = useState<string>(() => {
-    try {
-      return localStorage.getItem(CODE_STORAGE_KEY) || DEFAULT_AUTH_CODE;
-    } catch {
-      return DEFAULT_AUTH_CODE;
-    }
-  });
+  const [authorityCode, setAuthorityCodeState] = useState<string>('');
+
+  useEffect(() => {
+    setMemoryAuth(role, authorityCode);
+  }, [role, authorityCode]);
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
+    if (newRole === Role.CITIZEN) {
+      setAuthorityCodeState('');
+      setMemoryAuth(Role.CITIZEN, '');
+    } else {
+      setMemoryAuth(newRole, authorityCode);
+    }
     try {
       localStorage.setItem(ROLE_STORAGE_KEY, newRole);
     } catch {
@@ -44,11 +47,7 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const setAuthorityCode = (code: string) => {
     setAuthorityCodeState(code);
-    try {
-      localStorage.setItem(CODE_STORAGE_KEY, code);
-    } catch {
-      // ignore
-    }
+    setMemoryAuth(role, code);
   };
 
   return (
@@ -71,7 +70,7 @@ export function useRole(): RoleContextValue {
   if (!ctx) {
     return {
       role: Role.CITIZEN,
-      authorityCode: DEFAULT_AUTH_CODE,
+      authorityCode: '',
       setRole: () => {},
       setAuthorityCode: () => {},
       isAuthority: false,

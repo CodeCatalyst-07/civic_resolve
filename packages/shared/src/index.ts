@@ -385,9 +385,37 @@ export const systemStatsSchema = z.object({
   critical_open: z.number().int().nonnegative(),
   overdue: z.number().int().nonnegative(),
   median_resolution_hours: z.number().nonnegative(),
+  resolved_last_7_days: z.number().int().nonnegative(),
 });
 
 export type SystemStats = z.infer<typeof systemStatsSchema>;
+
+/**
+ * Valid lifecycle status transitions permitted for municipal authorities.
+ */
+export const statusTransitionsSchema = z.record(statusSchema, z.array(statusSchema));
+export type StatusTransitions = z.infer<typeof statusTransitionsSchema>;
+
+/**
+ * System metadata schema including domain taxonomies and lifecycle transition guards.
+ */
+export const systemMetaSchema = z.object({
+  categories: z.array(categorySchema),
+  urgencies: z.array(urgencySchema),
+  statuses: z.array(statusSchema),
+  roles: z.array(roleSchema),
+  departments: z.array(
+    z.object({
+      id: departmentSchema,
+      displayName: z.string(),
+      localAuthority: z.string(),
+    })
+  ),
+  slaHours: z.record(urgencySchema, z.number()),
+  status_transitions: statusTransitionsSchema,
+});
+
+export type SystemMeta = z.infer<typeof systemMetaSchema>;
 
 /**
  * Request schema for pre-submission triage analysis.
