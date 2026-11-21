@@ -23,8 +23,11 @@ export function createApp(config: Config, container?: AppContainer): express.Exp
   // Trust proxy for reverse proxies / serverless deployment (Vercel)
   app.set('trust proxy', 1);
 
+  // Disable x-powered-by before helmet to avoid removeHeader compatibility errors in serverless
+  app.disable('x-powered-by');
+
   // Security headers
-  app.use(helmet());
+  app.use(helmet({ xPoweredBy: false }));
 
   // Enforce JSON body limit of 20kb
   app.use(express.json({ limit: '20kb' }));

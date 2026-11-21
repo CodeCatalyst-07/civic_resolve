@@ -18,10 +18,19 @@ export function createRepository(config: Config): TicketRepository {
       );
     }
 
-    return new FirestoreTicketRepository({
-      serviceAccountJson: config.FIREBASE_SERVICE_ACCOUNT_JSON,
-      collectionName: 'tickets',
-    });
+    try {
+      return new FirestoreTicketRepository({
+        serviceAccountJson: config.FIREBASE_SERVICE_ACCOUNT_JSON,
+        collectionName: 'tickets',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(
+        '[CivicResolve Firestore Error]: Failed to initialize Firestore repository, falling back to in-memory store:',
+        msg
+      );
+      return new InMemoryTicketRepository();
+    }
   }
 
   return new InMemoryTicketRepository();

@@ -30,13 +30,21 @@ export interface FirestoreConfig {
  * Throws readable error without ever logging or leaking secret values.
  */
 function parseServiceAccount(raw: string): Record<string, unknown> {
+  let cleaned = raw.trim();
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+
   let parsed: unknown;
 
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(cleaned);
   } catch {
     try {
-      const decoded = Buffer.from(raw, 'base64').toString('utf8');
+      const decoded = Buffer.from(cleaned, 'base64').toString('utf8');
       parsed = JSON.parse(decoded);
     } catch {
       throw new Error(
@@ -56,7 +64,12 @@ function parseServiceAccount(raw: string): Record<string, unknown> {
     );
   }
 
-  return parsed as Record<string, unknown>;
+  const serviceAccount = parsed as Record<string, unknown>;
+  if (typeof serviceAccount.private_key === 'string') {
+    serviceAccount.private_key = (serviceAccount.private_key as string).replace(/\\n/g, '\n');
+  }
+
+  return serviceAccount;
 }
 
 /**
