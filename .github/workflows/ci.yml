@@ -37,8 +37,8 @@ jobs:
       - name: Run TypeScript typecheck
         run: npm run typecheck
 
-      - name: Run test suite
-        run: npm run test
-
       - name: Build all packages
         run: npm run build
+
+      - name: Run test suite
+        run: npm run test
