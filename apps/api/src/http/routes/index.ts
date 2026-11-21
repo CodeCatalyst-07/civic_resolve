@@ -25,6 +25,15 @@ export function createApiRouter(config: Config, container?: AppContainer): Route
   // Attach demo role middleware to resolve X-Demo-Role on all /api requests
   router.use(demoRoleMiddleware);
 
+  // Root operational check for /api
+  router.get('/', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'CivicResolve API',
+      version: '1.0.0',
+    });
+  });
+
   // Mount sub-routers
   router.use('/health', createHealthRouter(effectiveContainer));
   router.use('/meta', createMetaRouter());

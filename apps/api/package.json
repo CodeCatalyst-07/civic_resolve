@@ -3,7 +3,26 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "./dist/server.js",
+  "main": "./dist/src/server.js",
+  "types": "./src/server.ts",
+  "exports": {
+    ".": {
+      "types": "./src/server.ts",
+      "default": "./dist/src/server.js"
+    },
+    "./app": {
+      "types": "./src/app.ts",
+      "default": "./dist/src/app.js"
+    },
+    "./config": {
+      "types": "./src/config.ts",
+      "default": "./dist/src/config.js"
+    },
+    "./compose": {
+      "types": "./src/compose.ts",
+      "default": "./dist/src/compose.js"
+    }
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
