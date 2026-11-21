@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@civicresolve/shared": "*",
+    "@google-cloud/firestore": "9.4.1",
     "@google/genai": "3.6.1",
     "cors": "2.8.5",
     "express": "4.22.3",
