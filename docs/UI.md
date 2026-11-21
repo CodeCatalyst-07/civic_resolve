@@ -1,6 +1,6 @@
 # CivicResolve Design System & UI Documentation
 
-CivicResolve is designed for radical civic clarity, high speed, and universal accessibility (WCAG 2.2 AA).
+CivicResolve is designed for radical civic clarity, high speed, and universal accessibility (designed to WCAG 2.2 AA with automated contrast and axe checks).
 The interface uses plain language (~8th-grade reading level), eliminates all technical municipal jargon, and provides immediate visual feedback.
 
 ---

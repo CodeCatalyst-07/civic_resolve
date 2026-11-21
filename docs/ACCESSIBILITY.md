@@ -1,4 +1,4 @@
-# CivicResolve Accessibility Conformance Report (WCAG 2.2 AA)
+# CivicResolve Accessibility Conformance Report (Designed to WCAG 2.2 AA)
 
 CivicResolve is built to be accessible to all citizens and municipal officers, including individuals with visual, motor, auditory, or cognitive disabilities, elderly users, and users accessing municipal portals from low-bandwidth mobile devices or screen readers.
 
@@ -6,7 +6,7 @@ CivicResolve is built to be accessible to all citizens and municipal officers, i
 
 ## 1. Conformance Status
 
-- **Standard**: Web Content Accessibility Guidelines (WCAG) 2.2 Level AA
+- **Standard**: Designed to Web Content Accessibility Guidelines (WCAG) 2.2 Level AA with automated contrast and axe checks (no manual screen-reader audit)
 - **Automated Audit**: 0 violations reported across all components and pages via `vitest-axe` (axe-core engine)
 - **Contrast Ratios**: Verified programmatically with exact W3C sRGB relative luminance formula. All text-on-background pairs achieve $\ge 4.5:1$ and all interactive UI control borders achieve $\ge 3:1$.
 

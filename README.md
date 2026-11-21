@@ -1,153 +1,257 @@
 # CivicResolve
 
-> AI-powered civic grievance reporting and management web application built for the Google Hackathon.
+> AI-Assisted Civic Grievance Management — Built for Google PromptWars
 
-## 1. Problem Statement
-Urban citizens frequently encounter civic maintenance issues—such as hazardous potholes, accumulated garbage, broken streetlights, sewer overflows, and ruptured water pipes. Today, reporting systems suffer from poor categorization, vague priority queuing, lack of transparency, and cumbersome submission flows.
-
-**CivicResolve** streamlines municipal grievance redressal:
-1. **Citizen Portal**: Citizens submit unstructured reports in plain text with optional location data.
-2. **AI-Assisted Triage**: AI suggests categorization, initial urgency, reasoning, and confidence score.
-3. **Deterministic Rules Engine**: Domain logic calculates final urgency and dispatches the ticket to the proper municipal department.
-4. **Authority Dashboard**: Municipal teams manage an objective priority queue, review AI recommendations, and advance grievances through verified lifecycle states (Submitted -> Under Review -> Assigned -> In Progress -> Resolved -> Closed).
+[![CI](https://github.com/CodeCatalyst-07/civic_resolve/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeCatalyst-07/civic_resolve/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 2. AI Architecture & Honest AI Disclosure
-> **AI Architecture & Truthful Attribution**:
-> - **Default Demo Model**: Gemma 4 (`gemma-4-31b-it`) by Google, served via Jarvis Labs' OpenAI-compatible endpoint with thinking disabled to minimize latency.
-> - **Google Gemini Official API**: Implemented via `@google/genai` (SDK v3.6.1), configured for current recommended models (e.g. `gemini-3.5-flash-lite` or `gemini-3.8-flash`), tested with a mocked SDK in CI, and verified live only when `npm run ai:smoke -- --provider gemini` is run with a valid `GEMINI_API_KEY`.
-> - **Deterministic Mock Provider**: A fixture-backed provider driven by `fixtures/complaints.json` for offline testing and CI with zero network dependencies. See [docs/EVAL.md](docs/EVAL.md) and [docs/EVAL-mock.md](docs/EVAL-mock.md) for truthful scoring documentation.
-> - **Keyword Fallback**: If the daily request budget is exhausted or an AI endpoint fails, the system degrades gracefully to deterministic multilingual keyword classification with `needs_manual_triage = true`. AI is never silently assumed Low urgency.
-> - **Safety Invariant**: Model output is strictly an advisory suggestion. Domain rules enforce that urgency can only be raised, never lowered. Immediate hazard keywords always produce an emergency notice (112) and file a Critical grievance ticket.
+## Live Demo & Operational Status
+
+- **Live Deployed Web Application**: [https://civicresolve-chi.vercel.app/](https://civicresolve-chi.vercel.app/)
+- **Live Health & Configuration Diagnostics**: [https://civicresolve-chi.vercel.app/api/health](https://civicresolve-chi.vercel.app/api/health)
+- **Demo Mode Notice**: All data displayed in the live application is synthetic for hackathon evaluation purposes. The authority staff view is currently open in evaluation demo mode (`authorityGate: "open"`), allowing judges to inspect both citizen and authority workflows directly without requiring a separate access code.
 
 ---
 
-## 3. How This Maps to Hackathon Grading Criteria
+## Judge Quick Start (60-Second Walkthrough)
 
-| Criteria | Implementation Strategy | Status |
+1. **Report an Issue (Citizen Flow)**:
+   - Visit [Report Page](https://civicresolve-chi.vercel.app/report).
+   - Select a quick prompt (e.g. *"Large deep pothole on MG Road near City Hospital"*) or type an unstructured grievance.
+   - Choose a location on the interactive map or ward picker.
+   - Click **Analyze with AI** to view real-time triage recommendation.
+2. **Review AI Result Card**:
+   - Inspect the AI recommendation card displaying category, suggested urgency, recommended department, confidence score, safety hazard status, and plain-language reasoning.
+3. **Submit and Track**:
+   - Click **Submit Grievance** to generate a unique human-readable tracking ID (e.g. `BLR-RD-202611-ABCD`).
+   - You are redirected to the [Track Page](https://civicresolve-chi.vercel.app/track), showing the citizen timeline, status progression, and demo target resolution time.
+4. **Switch to Staff View (Authority Flow)**:
+   - In the top-right header, click the role switcher icon and toggle from **Citizen** to **Authority**.
+5. **Triage & Update Status**:
+   - Navigate to the [Authority Dashboard](https://civicresolve-chi.vercel.app/authority).
+   - Use the KPI tiles to filter by **Critical** or **Overdue** tickets.
+   - Click any ticket to open the detail panel, review AI vs domain rule diffs, enter staff notes, and advance the status (e.g. `Under Review` -> `In Progress` -> `Resolved`).
+
+---
+
+## Problem Statement
+
+Urban civic maintenance—including hazardous potholes, broken streetlights, sewer overflows, garbage accumulation, and water pipeline leaks—relies heavily on timely citizen reporting. However, traditional municipal grievance systems struggle with:
+- Vague and fragmented complaint taxonomies that confuse citizens
+- Lack of intelligent urgency prioritization, causing life-safety hazards to languish in backlogs
+- Opaque tracking mechanisms that leave citizens uninformed about resolution progress
+- Disconnected municipal dispatch routing between departments
+
+**CivicResolve** addresses these challenges by uniting an accessible citizen reporting portal with explainable AI triage, deterministic domain safety floors, transparent public tracking, and an operational municipal authority queue.
+
+---
+
+## Problem Statement to Code
+
+| Requirement | Implementation Feature | File / Route Reference |
 | :--- | :--- | :--- |
-| **Code Quality** | Monorepo with npm workspaces, strict TypeScript, ESLint 9 with architectural boundary rules, Prettier, clean layer separation, JSDoc annotations | Scaffolding, Domain, AI, Persistence, Citizen Portal & Authority Dashboard complete (Phases 2.0-2.5) |
-| **Security** | Zero secrets in client/repo (`secrets:check`), Helmet, 20kb JSON cap, Zod input sanitization (control char stripping), constant-time SHA-256 demo authority gate, sliding-window rate limiting, sensitive log redaction | Hardened in Phases 2.3 & 2.5 |
-| **Efficiency** | Same-origin Vercel deployment, lightweight bundle (102.97 kB initial gzip, well under 150 kB budget), zero-dependency pure domain layer, LRU triage cache, fast Vitest execution (470+ tests in <3s) | Optimized across all phases |
-| **Testing** | Unit, integration & a11y testing with Vitest (470+ tests passing, >90% coverage), Supertest for HTTP API, React Testing Library + vitest-axe (0 violations across 21 test scenarios) | >90% coverage in Phases 2.3-2.5 |
-| **Accessibility** | WCAG 2.2 AA compliance: 0 axe-core violations across 21 component states; $\ge 4.5:1$ text contrast & $\ge 3:1$ UI controls mathematically verified; keyboard skip-link; screen-reader live regions; Radix focus traps | Audited & verified in Phase 2.5 |
-| **Google Services Use** | Gemma 4 (Google open model) via Jarvis Labs, Google Gemini API via `@google/genai`, Google Maps Geocoding REST API, Firebase Firestore via `firebase-admin@14.5.1` Spark plan, Google Maps JS API Loader | Implemented & verified in Phases 2.2-2.5 |
-| **Problem Alignment** | Dual citizen/authority portal, operational work queue, KPI cards, AI vs human decision diffs, status transition guards, manual supervisor overrides, plain-language citizen explanations | Complete Dual Portal in Phase 2.5 |
+| **Simple Reporting Interface** | 3-step accessible flow with plain language, quick prompts, location picker, and contrast guarantees | [apps/web/src/app/pages/ReportPage.tsx](apps/web/src/app/pages/ReportPage.tsx) |
+| **AI Understands Grievances** | Multi-turn triage, plain summary generation, confidence scoring, and prompt injection defense | [apps/api/src/ai/jarvis.ts](apps/api/src/ai/jarvis.ts), [apps/api/src/ai/gemini.ts](apps/api/src/ai/gemini.ts) |
+| **Categorisation & Taxonomies** | 6 municipal categories mapped to departments with multilingual keyword matching | [apps/api/src/domain/taxonomy.ts](apps/api/src/domain/taxonomy.ts), [packages/shared/src/index.ts](packages/shared/src/index.ts) |
+| **Urgency & Safety Floors** | Deterministic domain rules, 112 emergency notice triggering, and monotonic urgency enforcement | [apps/api/src/domain/rules.ts](apps/api/src/domain/rules.ts), [apps/api/src/domain/emergency.ts](apps/api/src/domain/emergency.ts) |
+| **Department Recommendation** | Objective dispatch assignment with demo target times (SLAs) per category | [apps/api/src/domain/sla.ts](apps/api/src/domain/sla.ts), [apps/api/src/services/ticketService.ts](apps/api/src/services/ticketService.ts) |
+| **Submission to Tracking** | Public tracking with timeline, reopen action, community support counters, and public feed | [apps/api/src/http/routes/reports.ts](apps/api/src/http/routes/reports.ts), [apps/web/src/app/pages/TrackPage.tsx](apps/web/src/app/pages/TrackPage.tsx) |
+| **Resolution & Authority Queue** | Filterable priority queue, KPI tiles, AI vs human decision diffs, status transition guards | [apps/api/src/http/routes/authority.ts](apps/api/src/http/routes/authority.ts), [apps/web/src/app/pages/AuthorityPage.tsx](apps/web/src/app/pages/AuthorityPage.tsx) |
 
 ---
 
-## 4. Local Development Setup
+## Architecture & Repository Map
 
-### Prerequisites
-- Node.js `20.x` or later (tested on Node v25)
-- npm `10.x` or later
-
-### Installation
-```bash
-# 1. Clone repository and install dependencies
-git clone https://github.com/your-org/civicresolve.git
-cd civicresolve
-npm install
-
-# 2. Configure environment
-cp .env.example .env
-# Edit .env with your local settings (defaults run out-of-the-box with mock AI and in-memory store)
+```
+┌────────────────────────────────────────────────────────┐
+│               CivicResolve Web (Vite + React)          │
+│   Citizen Portal  │  Track View  │  Authority Queue    │
+└───────────────────────────┬────────────────────────────┘
+                            │ HTTP / JSON
+┌───────────────────────────▼────────────────────────────┐
+│            CivicResolve API (Node + Express)           │
+│   Rate Limiting  │  Zod Validation  │  Degraded Guard  │
+└───────┬───────────────────┬────────────────────┬───────┘
+        │                   │                    │
+┌───────▼────────┐  ┌───────▼────────┐   ┌───────▼───────┐
+│  Domain Rules  │  │  AI Providers  │   │  Persistence  │
+│  • Emergency   │  │  • Gemma 4     │   │  • Firestore  │
+│  • Proximity   │  │  • Gemini SDK  │   │  • In-Memory  │
+│  • Duplicates  │  │  • Fallback    │   │               │
+└────────────────┘  └────────────────┘   └───────────────┘
 ```
 
-### Running Locally
+### Folder Map
+
+```
+├── .github/workflows/ci.yml       # Dual Node 20.x & 22.x CI matrix
+├── apps/
+│   ├── api/                       # Express serverless backend
+│   │   ├── src/
+│   │   │   ├── ai/                # Gemma 4 (Jarvis), Gemini SDK, Mock, Fallback
+│   │   │   ├── domain/            # Pure domain rules, emergency, SLA, taxonomy
+│   │   │   ├── http/              # Express routes, controllers, middleware
+│   │   │   ├── repo/              # Firestore & In-Memory repository drivers
+│   │   │   └── services/          # Triage, geocoding, cache, and ticket services
+│   │   └── tests/                 # Unit & integration tests (337 passing)
+│   └── web/                       # React frontend SPA
+│       ├── src/
+│       │   ├── app/               # Shell layout, routing, error boundaries
+│       │   ├── features/
+│       │   │   ├── citizen/       # Reporting stepper, tracking, map picker
+│       │   │   └── authority/     # Priority queue, KPI tiles, detail drawer
+│       │   └── styles/            # Design tokens & contrast test suite
+│       └── src/test/              # RTL & vitest-axe accessibility tests (165 passing)
+├── packages/
+│   └── shared/                    # Shared Zod schemas, contracts, and DTOs (40 passing)
+├── docs/                          # Architecture, UI, Accessibility & API guides
+└── scripts/                       # Verification & security scanning tools
+```
+
+---
+
+## Honest AI Disclosure
+
+- **Default Production Model**: Google Gemma 4 (`gemma-4-31b-it`), hosted via Jarvis Labs OpenAI-compatible inference endpoint with thinking disabled to minimize response latency.
+- **Official Google Gemini API**: Implemented via `@google/genai` (SDK v3.6.1), tested with SDK mocks in CI, and verified live via `npm run ai:smoke -- --provider gemini` when `GEMINI_API_KEY` is supplied.
+- **Deterministic Mock Provider**: A fixture-backed provider utilizing `fixtures/complaints.json` for offline testing, local development, and reproducible CI test runs with zero network overhead.
+- **Keyword Fallback**: If upstream AI calls timeout or the daily request budget is reached, the system gracefully degrades to multilingual keyword classification with `needs_manual_triage = true`. AI is never silently assumed to be Low urgency.
+- **Monotonic Safety Invariant**: AI output is strictly an advisory suggestion. Deterministic domain rules ensure that urgency can only be raised (never lowered below safety floors). Critical hazards (e.g. fallen live wires) always trigger an immediate 112 emergency notice and assign a Critical grievance ticket.
+
+---
+
+## Google Services Integration
+
+| Service | Live in Production | Implemented & Optional (Check `/api/health`) | Verified by Smoke Test Only |
+| :--- | :---: | :---: | :---: |
+| **Gemma 4** (`gemma-4-31b-it`) | YES (Default live provider via Jarvis Labs) | — | Verified in CI & live |
+| **Google Cloud Firestore** | YES (Production repo driver via `firebase-admin@14.5.1` & `@google-cloud/firestore@9.4.1`) | — | Verified in live production |
+| **Google Maps Geocoding API** | — | YES (Server geocoding via `GOOGLE_MAPS_GEOCODING_API_KEY`; falls back to ward centroids when unset) | `npm run geocode:smoke` |
+| **Google Maps JavaScript API** | — | YES (Interactive client map via `VITE_GOOGLE_MAPS_BROWSER_KEY`; falls back to accessible coordinate picker when unset) | Component test verified |
+| **Google Gemini API** (`@google/genai@3.6.1`) | — | Configurable via `AI_PROVIDER=gemini` & `GEMINI_API_KEY` | `npm run ai:smoke -- --provider gemini` |
+
+---
+
+## Hackathon Criteria & Verification Evidence
+
+| Criteria | Implementation Strategy | Evidence Links |
+| :--- | :--- | :--- |
+| **Code Quality** | Monorepo structure, strict TypeScript, ESLint 9 architectural boundary rules, Prettier formatting | [ARCHITECTURE.md](ARCHITECTURE.md), [eslint.config.js](eslint.config.js), [tsconfig.base.json](tsconfig.base.json) |
+| **Security** | Zero secrets in repo/client, Helmet, safe body limits, Zod control character stripping, constant-time demo gate, fixed-window rate limiting | [SECURITY.md](SECURITY.md), [scripts/secretsCheck.mjs](scripts/secretsCheck.mjs), [apps/api/src/app.ts](apps/api/src/app.ts) |
+| **Efficiency** | Same-origin Vercel bundle (103.25 kB initial gzip JS, under 150 kB budget), LRU triage cache, fast Vitest execution | [apps/web/vite.config.ts](apps/web/vite.config.ts), [apps/api/src/services/cache.ts](apps/api/src/services/cache.ts) |
+| **Testing** | 542 unit/integration/a11y tests, >90% coverage in API & Web, 0 a11y violations across 22 scenarios | [apps/api/tests](apps/api/tests), [apps/web/src/test](apps/web/src/test), [packages/shared/src/index.test.ts](packages/shared/src/index.test.ts) |
+| **Accessibility** | Designed to WCAG 2.2 AA with automated contrast and axe checks (no manual screen-reader audit), keyboard skip-links, Radix focus traps | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [apps/web/src/test/a11y.test.tsx](apps/web/src/test/a11y.test.tsx) |
+| **Google Services** | Gemma 4, Cloud Firestore, Maps Geocoding REST API, Maps JS API Loader, Gemini GenAI SDK | [apps/api/src/ai](apps/api/src/ai), [apps/api/src/repo/firestore.ts](apps/api/src/repo/firestore.ts) |
+| **Problem Alignment** | Dual citizen/authority portal, operational priority queue, KPI tiles, AI vs human decision diffs, status transition guards | [docs/DEMO.md](docs/DEMO.md), [docs/UI.md](docs/UI.md), [docs/API.md](docs/API.md) |
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- Node.js `20.x` or `22.x` (matching GitHub Actions CI)
+- npm `10.x` or later
+
+### Installation & Execution
 ```bash
-# Start both API (port 3001) and Web frontend (port 5173) concurrently:
+# 1. Clone repository
+git clone https://github.com/CodeCatalyst-07/civic_resolve.git
+cd civic_resolve
+
+# 2. Install dependencies
+npm ci
+
+# 3. Configure environment
+cp .env.example .env
+
+# 4. Build shared contracts and packages
+npm run build
+
+# 5. Start development servers concurrently (API on 3001, Web on 5173)
 npm run dev
 ```
 
-Visit [http://localhost:5173](http://localhost:5173) in your browser. The Vite dev server automatically proxies `/api` requests to the Express server at `http://localhost:3001`.
-
-### Verification Commands
+### Full Verification Suite
 ```bash
-# Verify no keys or secrets are committed or staged
-npm run secrets:check
-
-# Lint all workspaces (with architectural boundary rules)
-npm run lint
-
-# Typecheck all TypeScript code
-npm run typecheck
-
-# Execute entire offline unit & integration test suite
-npm run test
-
-# Run test coverage suite with strict thresholds
-npm run test:coverage --workspace=@civicresolve/api
-
-# Build all applications
-npm run build
+# Runs secrets check, linting, typechecking, tests, and builds
+npm run verify
 ```
 
-### Data Seeding & Firestore Live Smoke Tests
+---
+
+## Seeding & Data Management
+
 ```bash
-# Seed deterministic synthetic tickets into In-Memory store
+# Seed deterministic test tickets into In-Memory store
 npm run seed -- --driver memory
 
 # Seed into live Cloud Firestore
 npm run seed -- --driver firestore
 
-# Reset and seed with a custom timestamp
-npm run seed -- --driver firestore --reset --now 2026-11-21T12:00:00.000Z
-
-# Run live Firestore integration smoke test (verifies connectivity and optimistic concurrency)
-npm run firestore:smoke
+# Reset Firestore collection and re-seed (requires confirmation flag)
+CONFIRM_RESET=yes npm run seed -- --driver firestore --reset
 ```
 
 ---
 
-## 5. Documentation Links
-- **[Evaluator Demo Guide (docs/DEMO.md)](docs/DEMO.md)**: Deterministic test tickets, verification flows for citizen tracking, reopen lifecycle, location boost, and authority dashboard.
-- **[System Architecture (ARCHITECTURE.md)](ARCHITECTURE.md)**: Layering, pure domain core, AI resilience, persistence, frontend architecture, and ESLint boundary rules.
-- **[Citizen Portal & Design System (docs/UI.md)](docs/UI.md)**: Design tokens, contrast table, plain-language dictionary, component catalog, state machine diagram, and evaluator test prompts.
-- **[Accessibility Conformance (docs/ACCESSIBILITY.md)](docs/ACCESSIBILITY.md)**: WCAG 2.2 AA audit results, `vitest-axe` component audit matrix, keyboard journey, and landmark navigation.
-- **[API Reference (docs/API.md)](docs/API.md)**: Complete route table, request/response envelopes, DTO schemas, and curl examples.
-- **[Security Architecture (SECURITY.md)](SECURITY.md)**: Rate limiting, demo role gate, constant-time token comparison, allowlist projection, and credential scanning.
-- **[AI Evaluation (docs/EVAL.md)](docs/EVAL.md)**: Benchmark evaluations across mock and live providers.
+## Evaluator Sample Prompts (Real Output from `npm run demo:samples`)
+
+*Note: The table below reflects the deterministic output generated by the mock provider and domain rules engine. Live outputs from a remote LLM may vary slightly in confidence scores and phrasing.*
+
+| Scenario | Category | Urgency | Department | Outcome Kind | Emergency? | Applied Rules |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| **Pothole near School (Location Boost)** | `pothole` | `critical` | Roads & Infrastructure | `ticket` | No | R4_DUPLICATE_BOOST |
+| **Life-Safety Hazard (112 Emergency Notice)** | `public_hazard` | `critical` | Public Health & Safety | `ticket` | YES (112) | None |
+| **Vague Complaint (Follow-up Question)** | `-` | `-` | None | `follow_up` | No | Follow-up question generated |
+| **Non-Civic Spam (Instant Rejection)** | `-` | `-` | None | `rejected` | No | Rejection explanation provided |
+| **Mixed Civic Grievance (Multi-issue Redressal)** | `garbage` | `high` | Sanitation & Waste Management | `ticket` | No | R4_DUPLICATE_BOOST |
+| **Prompt Injection Defense (Maintains Hazard Floor)** | `public_hazard` | `critical` | Public Health & Safety | `ticket` | YES (112) | None |
 
 ---
 
-## 6. Evaluator Sample Prompts (Predictable Triage Flows)
+## Deployment & Environment Variables
 
-For AI evaluators and judges testing the web application locally or in deployed environments:
+CivicResolve deploys as a unified monorepo application on Vercel:
+- Frontend: Statically bundled by Vite into `apps/web/dist`
+- Backend: Serverless Express function operating through `api/index.ts`
 
-| Scenario | Input Description | Expected AI Suggestion | Expected Domain Override / Result |
-| :--- | :--- | :--- | :--- |
-| **Hazardous pothole near sensitive site** | `"Large deep pothole on MG Road near City Hospital causing traffic hazard"` (Ward 4 / Lat: 12.9716, Lng: 77.5946) | Category: `roads`, Urgency: `Medium` | Urgency boosted to **`High`** due to Hospital proximity rule ($< 200$m). Assigned to Roads Department. |
-| **Active life-safety hazard** | `"Sparking live electric wire fallen on the street during rain near school"` (Ward 2 / Lat: 12.9250, Lng: 77.5850) | Category: `public_lighting`, Urgency: `High`, `safety_critical: true` | Immediate danger floor triggers **`Critical`** urgency + **Emergency Notice (Call 112)** banner. Ticket filed immediately. |
-| **Vague report requiring follow-up** | `"Water leaking"` (Short, missing street or severity details) | Category: `water_sewerage`, `confidence: 0.4` | Follow-up card prompts citizen: *"Could you specify if it is drinking water or sewage, and whether it is flooding the street?"* |
-| **Non-civic / spam submission** | `"FREE CRYPTO AIRDROP visit http://scam.example.com now!!!"` | `looksLikeSpam: true` | Rejected before reaching AI. Clear plain-language explanation shown with no ticket created. |
+### Required Environment Variable Names (Values are secret)
+- `NODE_ENV`
+- `AI_PROVIDER`
+- `JARVISLABS_API_KEY`
+- `JARVIS_BASE_URL`
+- `JARVIS_MODEL`
+- `GEMINI_API_KEY` (optional)
+- `GEMINI_MODEL` (optional)
+- `REPO_DRIVER`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_SERVICE_ACCOUNT_JSON`
+- `DEMO_AUTHORITY_CODE`
+- `AUTO_SEED`
+- `GOOGLE_MAPS_GEOCODING_API_KEY` (optional)
+- `VITE_GOOGLE_MAPS_BROWSER_KEY` (optional)
 
 ---
 
-## 7. Vercel Deployment & Serverless Considerations
+## Known Limitations
 
-CivicResolve is configured as **ONE project on Vercel**:
-- Web application builds statically into `apps/web/dist`.
-- Serverless API functions execute from `api/index.ts` under the `/api` route.
+- **Geocoding & Interactive Maps**: Requires active Google Cloud API keys with the Maps JavaScript API and Geocoding API enabled. In the absence of keys, the application falls back gracefully to Bangalore ward centroids and accessible coordinate/ward pickers.
+- **Serverless In-Memory State**: Fixed-window rate limiting and daily AI budget tracking run in-memory per serverless container instance. In high-traffic multi-region production, these would be backed by Redis or edge middleware.
+- **Authority Access in Demo**: For hackathon evaluation convenience, the authority dashboard operates with an open demo gate or shared access code rather than enterprise single sign-on (SSO).
 
-### Environment Variable Setup in Vercel
-In the Vercel Project Settings > Environment Variables:
-- `NODE_ENV`: `production`
-- `AI_PROVIDER`: `jarvis` (or `gemini` / `mock`)
-- `JARVISLABS_API_KEY`: *(your secret key)*
-- `JARVIS_BASE_URL`: `https://models.jarvislabs.net/v1`
-- `JARVIS_MODEL`: `gemma-4-31b-it`
-- `GEMINI_API_KEY`: *(optional, if using Gemini)*
-- `GEMINI_MODEL`: `gemini-3.5-flash-lite`
-- `REPO_DRIVER`: `firestore` (or `memory`)
-- `FIREBASE_PROJECT_ID`: `civic-resolve-4e949`
-- `FIREBASE_SERVICE_ACCOUNT_JSON`: *(base64 or JSON string of service account)*
-- `DEMO_AUTHORITY_CODE`: *(secret code to gate authority operations in demo)*
-- `AUTO_SEED`: `false` (set `true` to auto-seed empty stores on startup)
-- `VITE_GOOGLE_MAPS_BROWSER_KEY`: *(optional, browser-safe)*
+---
 
-### Serverless Operational Note
-In a serverless environment (such as Vercel Functions):
-- The Composition Root (`buildContainer`) instantiates connection pools once at module scope per container instance, preventing connection re-establishment overhead.
-- In-memory rate limiting and caches operate on a per-instance basis. For production multi-region deployments, an external Redis store or edge middleware can be attached.
+## Future Work
+
+- **Multimodal Photo Inspection**: Direct image upload enabling Gemma/Gemini vision models to assess pothole depth, garbage pile volume, and verify reported civic damage.
+- **Enterprise Authentication**: Integration with Firebase Auth or municipal OAuth/SAML providers for granular, role-based departmental permissions.
+- **Proactive Citizen Notifications**: Real-time status updates and SMS/WhatsApp notifications as grievance milestones are reached.
+- **Geographic Clustering**: Heatmap aggregation and geospatial clustering for municipal authorities to identify infrastructure fault patterns.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
