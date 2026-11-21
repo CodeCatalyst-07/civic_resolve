@@ -46,12 +46,19 @@ export function createApp(config: Config, container?: AppContainer): express.Exp
     }
   }
 
-  // Rate limiting applied specifically on /api
+  // Rate limiting applied specifically on /api with safe keyGenerator for serverless environments
   const apiLimiter = rateLimit({
     windowMs: config.RATE_LIMIT_WINDOW_MS,
     max: config.RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req: express.Request) => {
+      const forwarded = req.headers['x-forwarded-for'];
+      if (typeof forwarded === 'string' && forwarded.length > 0) {
+        return forwarded.split(',')[0]?.trim() || '127.0.0.1';
+      }
+      return req.socket?.remoteAddress || '127.0.0.1';
+    },
     message: {
       error: 'Too Many Requests',
       message: 'Rate limit exceeded. Please try again later.',

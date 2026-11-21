@@ -1,6 +1,6 @@
-import { createApp } from '../apps/api/src/app.js';
-import { loadConfig } from '../apps/api/src/config.js';
-import { buildContainer } from '../apps/api/src/compose.js';
+import { createApp } from '../apps/api/dist/src/app.js';
+import { loadConfig } from '../apps/api/dist/src/config.js';
+import { buildContainer } from '../apps/api/dist/src/compose.js';
 
 let app: ReturnType<typeof createApp>;
 
