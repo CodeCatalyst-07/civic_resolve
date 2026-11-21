@@ -9,6 +9,12 @@ describe('Config Loader (Unit Tests)', () => {
     expect(config.AI_PROVIDER).toBe('mock');
     expect(config.REPO_DRIVER).toBe('memory');
     expect(config.AI_DAILY_BUDGET).toBe(200);
+    expect(config.AI_TIMEOUT_MS).toBe(15000);
+    expect(config.AI_MAX_TOKENS).toBe(1000);
+    expect(config.AI_DISABLE_THINKING).toBe(true);
+    expect(config.AI_CACHE_MAX_ENTRIES).toBe(200);
+    expect(config.AI_CACHE_TTL_MS).toBe(3600000);
+    expect(config.GEOCODE_TIMEOUT_MS).toBe(5000);
     expect(config.RATE_LIMIT_MAX).toBe(100);
     expect(config.JARVIS_BASE_URL).toBe('https://models.jarvislabs.net/v1');
     expect(config.JARVIS_MODEL).toBe('gemma-4-31b-it');

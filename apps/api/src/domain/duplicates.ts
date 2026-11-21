@@ -21,6 +21,7 @@ export interface DuplicateCandidate {
   readonly ticket: Ticket;
   readonly distance_m: number | null;
   readonly similarity: number;
+  readonly score: number;
 }
 
 /**
@@ -190,24 +191,35 @@ export function findDuplicateCandidates(
     const ticketTokens = tokenizeText(ticket.description);
     const similarity = jaccardSimilarity(reportTokens, ticketTokens);
 
+    // Composite scoring: 0.6 * distance_score + 0.4 * text_similarity
+    const distanceScore =
+      distance != null
+        ? Math.max(0, 1 - distance / config.duplicateRadiusMeters)
+        : 0;
+    const compositeScore =
+      distance != null
+        ? config.duplicateDistanceWeight * distanceScore +
+          config.duplicateTextSimilarityWeight * similarity
+        : similarity;
+
     candidates.push({
       ticket,
       distance_m: distance != null ? Math.round(distance * 10) / 10 : null,
       similarity: Math.round(similarity * 1000) / 1000,
+      score: Math.round(compositeScore * 1000) / 1000,
     });
   }
 
-  // Sort candidates: distance ascending (nulls last), then similarity descending
+  // Sort candidates: composite score descending, then distance ascending (nulls last)
   candidates.sort((a, b) => {
-    if (a.distance_m != null && b.distance_m != null) {
-      if (Math.abs(a.distance_m - b.distance_m) > 0.01) {
-        return a.distance_m - b.distance_m;
-      }
-    } else if (a.distance_m != null) {
-      return -1;
-    } else if (b.distance_m != null) {
-      return 1;
+    if (Math.abs(a.score - b.score) > 0.001) {
+      return b.score - a.score;
     }
+    if (a.distance_m != null && b.distance_m != null) {
+      return a.distance_m - b.distance_m;
+    }
+    if (a.distance_m != null) return -1;
+    if (b.distance_m != null) return 1;
     return b.similarity - a.similarity;
   });
 

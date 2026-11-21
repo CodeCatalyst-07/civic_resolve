@@ -13,6 +13,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p api/tsconfig.json --noEmit",
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspace=@civicresolve/api",
+    "eval": "npm run eval --workspace=@civicresolve/api --",
+    "ai:smoke": "npm run ai:smoke --workspace=@civicresolve/api --",
+    "geocode:smoke": "npm run geocode:smoke --workspace=@civicresolve/api --",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

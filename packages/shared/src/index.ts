@@ -95,6 +95,20 @@ export const roleSchema = z.enum(ROLES);
 export const departmentSchema = z.enum(DEPARTMENTS);
 
 /**
+ * Provenance of AI triage analysis for truthful attribution.
+ */
+export const AiSource = {
+  JARVIS_GEMMA: 'jarvis_gemma',
+  GEMINI: 'gemini',
+  MOCK: 'mock',
+  KEYWORD_FALLBACK: 'keyword_fallback',
+} as const;
+
+export type AiSource = (typeof AiSource)[keyof typeof AiSource];
+export const AI_SOURCES = Object.values(AiSource) as [AiSource, ...AiSource[]];
+export const aiSourceSchema = z.enum(AI_SOURCES);
+
+/**
  * Missing information categories that prompt follow-up questions.
  */
 export const MISSING_INFO_FIELDS = ['location', 'issue_type', 'severity', 'landmark'] as const;
@@ -177,6 +191,7 @@ export const finalDecisionSchema = z.object({
   emergency_notice: z.boolean(),
   needs_manual_triage: z.boolean(),
   ai_suggestion: triageSuggestionSchema.nullable(),
+  ai_source: aiSourceSchema.optional(),
 });
 
 export type FinalDecision = z.infer<typeof finalDecisionSchema>;

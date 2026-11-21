@@ -90,7 +90,73 @@
 
 ---
 
-## 3. Shared Types & Contracts (`packages/shared`)
+## 3. Phase 2.2: Triage Pipeline, AI Providers & Server-Side Geocoding
+
+### Complete Grievance Analysis Flow (Cheap First)
+```text
+Citizen Grievance Submission (description, location, ward)
+    │
+    ▼
+1. Sanitize Input: strip ASCII control characters and normalize whitespace
+    │
+    ▼
+2. Spam Check (looksLikeSpam):
+    ├── If spam (repeated chars, emojis only, promotional URLs)
+    │     └── Reject immediately without calling AI (ai_source: keyword_fallback, outcome: rejected)
+    └── If legitimate text -> Proceed to Step 3
+    │
+    ▼
+3. Cache Lookup (computeTriageCacheKey):
+    ├── SHA-256(normalizedText + ward)
+    ├── If cache hit: reuse cached TriageSuggestion (cached: true)
+    └── If cache miss: proceed to Step 4
+    │
+    ▼
+4. Daily Budget Check (budget.canConsume):
+    ├── If budget exhausted: degrade gracefully to domain classifyByKeywords
+    │     (ai_source: keyword_fallback, degraded: true, needs_manual_triage: true)
+    └── If budget available: proceed to Step 5
+    │
+    ▼
+5. AI Provider Execution (withResilience decorator):
+    ├── Models: Gemma 4 via Jarvis Labs (default) OR Gemini via @google/genai OR MockProvider
+    ├── Prompt Injection Defense: Delimited <complaint>...</complaint> with neutralized tags
+    ├── Resilience Retries: 1 retry with exponential backoff on 429/5xx/timeout; 1 repair retry on schema parse error
+    ├── On provider success: consume budget and store in LRU cache
+    └── On provider failure: degrade gracefully to classifyByKeywords (degraded: true, needs_manual_triage: true)
+    │
+    ▼
+6. Spatiotemporal Duplicate Evaluation (findDuplicateCandidates):
+    ├── Evaluates open tickets matching category within 150m radius & 14 days
+    ├── Computes composite score: 0.6 * distance_score + 0.4 * text_jaccard_similarity
+    └── Passes duplicateCount to domain rules context
+    │
+    ▼
+7. Domain Rules Engine (decideTriage / applyRules):
+    ├── Evaluates R1 (immediate danger -> Critical floor, emergency_notice: 112)
+    ├── Evaluates R2 (safety_critical -> at least High)
+    ├── Evaluates R3 (sensitive site proximity -> +1 level)
+    ├── Evaluates R4 (duplicate cluster >= 3 -> +1 level)
+    └── Resolves municipal department deterministically
+    │
+    ▼
+8. Outcome Generation (TriageOutcome):
+    ├── "ticket": Confirmed grievance ticket (always filed when danger is detected)
+    ├── "follow_up": Clarifying question round (bypassed if danger detected)
+    └── "rejected": Non-civic issue guidance (never rejected if danger detected)
+    │
+    ▼
+9. Privacy-Safe Metadata Logging:
+    └── Logs provider name, outcome kind, cached/degraded flags, duration; NEVER logs complaint text or keys.
+
+### Server-side Geocoding with Graceful Degradation
+- **`GoogleGeocodingProvider`**: Connects to Google Maps Geocoding REST API with `region=in` bias, timeout from `GEOCODE_TIMEOUT_MS`, in-memory cache, and mainland India bounding box validation (6°N-38°N, 68°E-98°E).
+- **`NullGeocodingProvider`**: Fallback provider when `GOOGLE_MAPS_SERVER_KEY` is omitted, returning `not_configured` while keeping all grievance triage capabilities 100% operational offline.
+```
+
+---
+
+## 4. Shared Types & Contracts (`packages/shared`)
 Both `apps/web` and `apps/api` share canonical types and Zod schemas from `@civicresolve/shared`:
 - Enums: `Category`, `Urgency`, `Status`, `Role`, `Department`
 - Schemas: `createReportInputSchema`, `triageSuggestionSchema`, `finalDecisionSchema`, `ticketSchema`
@@ -98,16 +164,15 @@ Both `apps/web` and `apps/api` share canonical types and Zod schemas from `@civi
 
 ---
 
-## 4. Strict Domain Layer Boundary & Purity Enforcement
-The `domain/` directory (`apps/api/src/domain`) encapsulates core civic grievance business logic:
-- **Zero External Dependencies**: Pure TypeScript functions with zero network, filesystem, or database I/O.
-- **Strict Boundary**: `domain/` is strictly prohibited from importing from `ai/`, `repo/`, or `http/`.
-- **Injected Non-Determinism**: Time (`now: Date`) and randomness (`randomBytes: Uint8Array`) are strictly injected. Direct calls to `Date.now()`, parameterless `new Date()`, `Math.random()`, and `crypto` imports are banned.
-- **Enforcement**: Enforced at compile and lint time via ESLint `no-restricted-imports`, `no-restricted-properties`, and `no-restricted-syntax`.
+## 5. Strict Layer Boundaries & Purity Enforcement
+- **Domain (`apps/api/src/domain`)**: Pure TypeScript functions with zero external dependencies, no network, no I/O, no crypto. Injected time and randomness. Prohibited from importing `ai/`, `repo/`, or `http/`.
+- **AI Layer (`apps/api/src/ai`)**: Prohibited from importing `http/` or `repo/`.
+- **Services Layer (`apps/api/src/services`)**: Prohibited from importing `http/` or `repo/`.
+- **Enforcement**: Statically verified via ESLint `no-restricted-imports`, `no-restricted-properties`, and `no-restricted-syntax`.
 
 ---
 
-## 5. Hosting & Deployment Topology
+## 6. Hosting & Deployment Topology
 - **Single Vercel Project**:
   - `apps/web` is built as static assets and served from CDN edge.
   - `api/index.ts` is deployed as a Vercel Serverless Function under `/api`.

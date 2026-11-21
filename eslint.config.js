@@ -115,5 +115,67 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  // Architecture boundaries: AI layer cannot import from http/ or repo/
+  {
+    files: ['apps/api/src/ai/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/repo',
+                '**/repo/**',
+                '**/http',
+                '**/http/**',
+                '../repo',
+                '../repo/**',
+                '../http',
+                '../http/**',
+                '../../repo',
+                '../../repo/**',
+                '../../http',
+                '../../http/**',
+              ],
+              message:
+                'Architectural Boundary Violation: AI layer cannot import from http/ or repo/ layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Architecture boundaries: Services layer cannot import from http/ or repo/
+  {
+    files: ['apps/api/src/services/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/repo',
+                '**/repo/**',
+                '**/http',
+                '**/http/**',
+                '../repo',
+                '../repo/**',
+                '../http',
+                '../http/**',
+                '../../repo',
+                '../../repo/**',
+                '../../http',
+                '../../http/**',
+              ],
+              message:
+                'Architectural Boundary Violation: Services layer cannot import from http/ or repo/ layers.',
+            },
+          ],
+        },
+      ],
+    },
   }
 );

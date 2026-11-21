@@ -14,6 +14,9 @@ import {
   DEPARTMENTS,
   categorySchema,
   departmentSchema,
+  AiSource,
+  AI_SOURCES,
+  aiSourceSchema,
   triageSuggestionSchema,
   appliedRuleSchema,
   finalDecisionSchema,
@@ -290,6 +293,35 @@ describe('AppliedRule and FinalDecision Schemas', () => {
     };
     const parsed = finalDecisionSchema.parse(decision);
     expect(parsed.department).toBeNull();
+  });
+
+  it('validates AiSource enum values and schema', () => {
+    expect(AI_SOURCES).toEqual([
+      AiSource.JARVIS_GEMMA,
+      AiSource.GEMINI,
+      AiSource.MOCK,
+      AiSource.KEYWORD_FALLBACK,
+    ]);
+    expect(aiSourceSchema.parse('jarvis_gemma')).toBe(AiSource.JARVIS_GEMMA);
+    expect(aiSourceSchema.parse('gemini')).toBe(AiSource.GEMINI);
+    expect(aiSourceSchema.parse('mock')).toBe(AiSource.MOCK);
+    expect(aiSourceSchema.parse('keyword_fallback')).toBe(AiSource.KEYWORD_FALLBACK);
+    expect(() => aiSourceSchema.parse('invalid_ai_source')).toThrow();
+  });
+
+  it('validates finalDecisionSchema with ai_source attribution', () => {
+    const decisionWithSource = {
+      urgency: 'high',
+      category: 'pothole',
+      department: 'roads',
+      applied_rules: [],
+      emergency_notice: false,
+      needs_manual_triage: false,
+      ai_suggestion: null,
+      ai_source: AiSource.JARVIS_GEMMA,
+    };
+    const parsed = finalDecisionSchema.parse(decisionWithSource);
+    expect(parsed.ai_source).toBe(AiSource.JARVIS_GEMMA);
   });
 });
 

@@ -17,6 +17,15 @@ const envSchema = z
     FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
     GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
     AI_DAILY_BUDGET: z.coerce.number().int().positive().default(200),
+    AI_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+    AI_MAX_TOKENS: z.coerce.number().int().positive().default(1000),
+    AI_DISABLE_THINKING: z
+      .union([z.boolean(), z.enum(['true', 'false'])])
+      .transform((val) => (typeof val === 'boolean' ? val : val === 'true'))
+      .default(true),
+    AI_CACHE_MAX_ENTRIES: z.coerce.number().int().positive().default(200),
+    AI_CACHE_TTL_MS: z.coerce.number().int().positive().default(3600000),
+    GEOCODE_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
     ALLOWED_ORIGINS: z.string().optional().default(''),

@@ -14,10 +14,12 @@ Urban citizens frequently encounter civic maintenance issues—such as hazardous
 ---
 
 ## 2. AI Architecture & Honest AI Disclosure
-> **AI Architecture Note**:
-> Triage runs behind a provider interface. The default demo model is Gemma 4 (`gemma-4-31b-it`) from Google served through Jarvis Labs' OpenAI-compatible endpoint; a Gemini provider using the official Google SDK is switchable by environment variable.
-
-*(Note: During Phase 2.0 scaffolding, the system runs with the deterministic `mock` provider by default. Provider implementations arrive in Phase 2.2).*
+> **AI Architecture & Truthful Attribution**:
+> - **Default Demo Model**: Gemma 4 (`gemma-4-31b-it`) by Google, served via Jarvis Labs' OpenAI-compatible endpoint with thinking disabled to minimize latency.
+> - **Google Gemini Official API**: Implemented via `@google/genai` (SDK v3.6.1), tested with a mocked SDK in CI, and verified live only when `npm run ai:smoke -- --provider gemini` is run with a valid `GEMINI_API_KEY`.
+> - **Deterministic Mock Provider**: A fixture-backed provider driven by `fixtures/complaints.json` for offline testing and CI with zero network dependencies.
+> - **Keyword Fallback**: If the daily request budget is exhausted or an AI endpoint fails, the system degrades gracefully to deterministic multilingual keyword classification with `needs_manual_triage = true`. AI is never silently assumed Low urgency.
+> - **Safety Invariant**: Model output is strictly an advisory suggestion. Domain rules enforce that urgency can only be raised, never lowered. Immediate hazard keywords always produce an emergency notice (112) and file a Critical grievance ticket.
 
 ---
 

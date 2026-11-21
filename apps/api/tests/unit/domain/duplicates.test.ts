@@ -6,6 +6,7 @@ import {
   type ReportSummary,
 } from '../../../src/domain/duplicates.js';
 import { Category, Urgency, Status, Department, type Ticket } from '@civicresolve/shared';
+import { DOMAIN_CONFIG } from '../../../src/domain/config.js';
 
 describe('Duplicate Candidate Detection (duplicates.ts)', () => {
   const mockNow = new Date('2026-11-21T10:00:00.000Z');
@@ -107,29 +108,46 @@ describe('Duplicate Candidate Detection (duplicates.ts)', () => {
     expect(candidates).toHaveLength(0);
   });
 
-  it('ranks candidates primarily by distance ascending, then by similarity descending', () => {
-    const closestTicket = makeTicket({
+  it('pins duplicate composite-score weights in DOMAIN_CONFIG and computes composite score correctly', () => {
+    expect(DOMAIN_CONFIG.duplicateDistanceWeight).toBe(0.6);
+    expect(DOMAIN_CONFIG.duplicateTextSimilarityWeight).toBe(0.4);
+    expect(DOMAIN_CONFIG.duplicateThresholdScore).toBe(0.5);
+
+    const ticket = makeTicket({
+      id: 'CR-DUP1',
+      description: 'Huge pothole on 100ft road near signal causing traffic.',
+      location: { lat: 12.9718, lng: 77.5948 },
+    });
+
+    const candidates = findDuplicateCandidates(baseReport, [ticket], mockNow);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.score).toBeGreaterThan(0.7);
+  });
+
+  it('ranks candidates by composite score descending', () => {
+    const minorCloseTicket = makeTicket({
       id: 'CR-CLOSE',
-      location: Object.freeze({ lat: 12.9717, lng: 77.5947 }), // ~15m
+      location: Object.freeze({ lat: 12.9717, lng: 77.5947 }), // ~15m away, 0 text similarity
       description: 'Minor road defect',
     });
 
-    const mediumTicket = makeTicket({
+    const exactMediumTicket = makeTicket({
       id: 'CR-MEDIUM',
-      location: Object.freeze({ lat: 12.9722, lng: 77.5952 }), // ~95m
-      description: 'Huge pothole on 100ft road near signal causing traffic.', // 1.0 similarity
+      location: Object.freeze({ lat: 12.9722, lng: 77.5952 }), // ~95m away, 1.0 text similarity
+      description: 'Huge pothole on 100ft road near signal causing traffic.',
     });
 
     const candidates = findDuplicateCandidates(
       baseReport,
-      [mediumTicket, closestTicket],
+      [minorCloseTicket, exactMediumTicket],
       mockNow
     );
 
     expect(candidates).toHaveLength(2);
-    // Closest distance ranks first even if medium has higher similarity
-    expect(candidates[0]?.ticket.id).toBe('CR-CLOSE');
-    expect(candidates[1]?.ticket.id).toBe('CR-MEDIUM');
+    // Medium ticket has higher composite score due to text similarity (0.62 > 0.54)
+    expect(candidates[0]?.ticket.id).toBe('CR-MEDIUM');
+    expect(candidates[1]?.ticket.id).toBe('CR-CLOSE');
+    expect(candidates[0]?.score).toBeGreaterThan(candidates[1]?.score ?? 0);
   });
 
   it('sorts tickets with geographic coordinates ahead of tickets without coordinates', () => {

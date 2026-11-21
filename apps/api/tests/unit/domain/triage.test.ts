@@ -57,7 +57,7 @@ describe('Triage Decision Engine (decideTriage)', () => {
     }
   });
 
-  it('returns { kind: "rejected" } but sets emergency_notice = true if danger keyword is detected in non-civic input', () => {
+  it('always files a ticket with emergency_notice = true when danger keyword is detected, even if suggested non-civic', () => {
     const nonCivicDangerSuggestion: TriageSuggestion = Object.freeze({
       ...validSuggestion,
       is_civic_issue: false,
@@ -71,9 +71,34 @@ describe('Triage Decision Engine (decideTriage)', () => {
     };
 
     const outcome = decideTriage(input);
-    expect(outcome.kind).toBe('rejected');
-    if (outcome.kind === 'rejected') {
+    expect(outcome.kind).toBe('ticket');
+    if (outcome.kind === 'ticket') {
       expect(outcome.emergency_notice).toBe(true);
+      expect(outcome.decision.emergency_notice).toBe(true);
+      expect(outcome.decision.urgency).toBe(Urgency.CRITICAL);
+      expect(outcome.decision.category).toBe(Category.PUBLIC_HAZARD);
+    }
+  });
+
+  it('bypasses follow-up questions when danger keyword is detected even if confidence is low', () => {
+    const lowConfidenceDangerSuggestion: TriageSuggestion = Object.freeze({
+      ...validSuggestion,
+      confidence: 0.3,
+      missing_info: ['location' as MissingInfoField],
+    });
+
+    const input: TriageInput = {
+      description: 'Live wire sparking and hanging over footpath near market!',
+      suggestion: lowConfidenceDangerSuggestion,
+      followUpRounds: 0,
+      now: mockNow,
+    };
+
+    const outcome = decideTriage(input);
+    expect(outcome.kind).toBe('ticket');
+    if (outcome.kind === 'ticket') {
+      expect(outcome.emergency_notice).toBe(true);
+      expect(outcome.decision.urgency).toBe(Urgency.CRITICAL);
     }
   });
 

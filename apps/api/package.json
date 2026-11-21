@@ -9,10 +9,14 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "eval": "tsx scripts/eval.ts",
+    "ai:smoke": "tsx scripts/aiSmoke.ts",
+    "geocode:smoke": "tsx scripts/geocodeSmoke.ts"
   },
   "dependencies": {
     "@civicresolve/shared": "*",
+    "@google/genai": "3.6.1",
     "cors": "2.8.5",
     "express": "4.22.3",
     "express-rate-limit": "7.5.0",

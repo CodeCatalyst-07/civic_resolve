@@ -10,8 +10,10 @@ The domain core (`apps/api/src/domain`) is the pure decision-making and business
 - **`emergency.ts`**: Unicode-aware hazard keyword detection establishing an immediate Critical urgency floor for public safety.
 - **`rules.ts`**: Sequential deterministic rules engine evaluating hazard floors, safety criteria, landmark proximity, and duplicate volume.
 - **`fallback.ts`**: Transparent multilingual keyword classifier and spam/gibberish detection for the AI-offline path.
-- **`triage.ts`**: Top-level decision engine returning a discriminated union (`ticket`, `follow_up`, or `rejected`).
-- **`duplicates.ts`**: Proximity and Jaccard token-overlap matching to identify and rank candidate duplicate complaints.
+- **`triage.ts`**: Top-level decision engine returning a discriminated union (`ticket`, `follow_up`, or `rejected`). Immediate danger reports always file a confirmed ticket at Critical urgency with `emergency_notice = true` (never blocked or rejected).
+- **`duplicates.ts`**: Candidate duplicate detection using a composite scoring formula:
+  $$\text{score} = w_{\text{dist}} \times \max\left(0, 1 - \frac{\text{distance}}{\text{duplicateRadiusMeters}}\right) + w_{\text{text}} \times \text{jaccardSimilarity}$$
+  where $w_{\text{dist}} = 0.6$ (`duplicateDistanceWeight`), $w_{\text{text}} = 0.4$ (`duplicateTextSimilarityWeight`), and radius = 150m (`duplicateRadiusMeters`). Candidates are ranked by `score` descending.
 - **`sla.ts`**: Urgency-based resolution deadline calculations, overdue detection, and automatic escalation logic.
 - **`status.ts`**: Complete grievance lifecycle state machine enforcing role-based transitions and resolution audit notes.
 - **`ticketId.ts`**: Non-guessable public tracking identifier generator utilizing Crockford Base32 encoding.
