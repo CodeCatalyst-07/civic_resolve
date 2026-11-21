@@ -151,7 +151,7 @@ export function Layout({ initialRole }: LayoutProps): React.JSX.Element {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-1">
           <p className="font-semibold text-ink">CivicResolve — AI-Assisted Civic Grievance Management</p>
           <p>
-            Compliant with WCAG 2.2 AA accessibility standards. All municipal dispatches governed by statutory SLAs.
+            Designed to WCAG 2.2 AA with automated contrast and axe checks (no manual screen-reader audit). All municipal dispatches governed by demo target times.
           </p>
           <p className="text-[11px] text-slate-400">
             Demonstration mode for Google Hackathon evaluation.

@@ -18,6 +18,7 @@
     "geocode:smoke": "npm run geocode:smoke --workspace=@civicresolve/api --",
     "firestore:smoke": "npm run firestore:smoke --workspace=@civicresolve/api --",
     "lint": "eslint .",
+    "verify": "npm run secrets:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "secrets:check": "node scripts/secretsCheck.mjs",
     "seed": "npm run seed --workspace=@civicresolve/api --",
     "demo:samples": "npm run demo:samples --workspace=@civicresolve/api",

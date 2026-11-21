@@ -18,9 +18,9 @@ export interface DecisionEventSnapshot {
 }
 
 /**
- * Formats statutory SLA deadline countdown into human-readable plain language.
+ * Formats demo target time countdown into human-readable plain language.
  *
- * @param dueAtIso - ISO timestamp of SLA deadline
+ * @param dueAtIso - ISO timestamp of target deadline
  * @param now - Reference anchor time (defaults to current system time)
  * @returns TargetSlaStatus with plain label and overdue boolean
  */
