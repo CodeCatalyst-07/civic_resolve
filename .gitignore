@@ -24,6 +24,8 @@ build/
 
 # Service account credentials & private keys
 *service-account*.json
+*firebase-adminsdk*.json
+*firebase*.json
 *.pem
 *.key
 *.cert
