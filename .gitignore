@@ -42,6 +42,10 @@ PHASE_*.md
 docs/PHASE_*.md
 AUDIT_REPORT.md
 
+# Local Design & Stitch Prompts (Kept locally on machine, excluded from git)
+*STITCH*.md
+docs/*STITCH*.md
+
 # IDE and OS files
 .DS_Store
 Thumbs.db
