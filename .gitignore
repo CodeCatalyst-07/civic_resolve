@@ -36,6 +36,12 @@ build/
 # Testing coverage
 coverage/
 
+# Local Phase and Audit Reports (Kept locally on machine, excluded from git)
+*PHASE*_REPORT.md
+PHASE_*.md
+docs/PHASE_*.md
+AUDIT_REPORT.md
+
 # IDE and OS files
 .DS_Store
 Thumbs.db
