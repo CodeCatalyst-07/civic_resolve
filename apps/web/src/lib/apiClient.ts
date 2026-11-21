@@ -22,6 +22,7 @@ import {
   type TicketQuery,
   type Department,
   departmentSchema,
+  CLIENT_AI_TIMEOUT_MS,
 } from '@civicresolve/shared';
 
 export class ApiError extends Error {
@@ -157,7 +158,11 @@ export class FetchApiClient implements ApiClient {
     }
 
     if (parseFailed || !json) {
-      throw new ApiError(res.status, 'parse_error', `Invalid JSON response from ${path}`);
+      throw new ApiError(
+        res.status,
+        'parse_error',
+        `Invalid JSON response from ${path}. Ensure the CivicResolve API backend is running on port 3001.`
+      );
     }
 
     const envelope = json as { data?: unknown };
@@ -199,10 +204,17 @@ export class FetchApiClient implements ApiClient {
   }
 
   public async analyzeReport(input: AnalyzeReportInput): Promise<AnalyzeResult> {
-    return this.request('/api/reports/analyze', analyzeResultSchema, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CLIENT_AI_TIMEOUT_MS);
+    try {
+      return await this.request('/api/reports/analyze', analyzeResultSchema, {
+        method: 'POST',
+        body: JSON.stringify(input),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   public async submitReport(input: SubmitReportInput): Promise<SubmitResult> {

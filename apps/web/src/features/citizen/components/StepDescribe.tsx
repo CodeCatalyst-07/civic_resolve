@@ -94,7 +94,7 @@ export const StepDescribe: React.FC<StepDescribeProps> = ({ value, onChange, onN
             className={`w-full p-3 text-sm bg-surface rounded-lg border leading-relaxed placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-primary ${
               error ? 'border-red-500 bg-red-50/20' : 'border-slate-500'
             }`}
-            aria-describedby="describe-help describe-counter describe-error"
+            aria-describedby="describe-help describe-counter describe-privacy describe-error"
             aria-invalid={!!error}
             required
           />
@@ -113,6 +113,10 @@ export const StepDescribe: React.FC<StepDescribeProps> = ({ value, onChange, onN
               {charCount} / 1000 characters
             </span>
           </div>
+
+          <p id="describe-privacy" className="mt-1 text-xs text-slate-500">
+            Please do not include phone numbers or other personal details.
+          </p>
 
           <FieldError id="describe-error" error={error} />
         </div>

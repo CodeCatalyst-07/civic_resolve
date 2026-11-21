@@ -545,3 +545,15 @@ export function ok<T>(value: T): Result<T, never> {
 export function err<E>(error: E): Result<never, E> {
   return Object.freeze({ ok: false, error });
 }
+
+/**
+ * Total deadline in milliseconds for an AI triage analysis operation covering
+ * primary model call, exponential backoff retries, and schema repairs.
+ */
+export const DEFAULT_AI_DEADLINE_MS = 20000;
+
+/**
+ * Client-side HTTP timeout for triage analysis, guaranteed to exceed the backend deadline
+ * by 5 seconds so the browser never prematurely aborts a valid server response.
+ */
+export const CLIENT_AI_TIMEOUT_MS = DEFAULT_AI_DEADLINE_MS + 5000; // 25000 ms

@@ -18,6 +18,7 @@ const envSchema = z
     GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
     AI_DAILY_BUDGET: z.coerce.number().int().positive().default(200),
     AI_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+    AI_TOTAL_DEADLINE_MS: z.coerce.number().int().positive().default(20000),
     AI_MAX_TOKENS: z.coerce.number().int().positive().default(1000),
     AI_DISABLE_THINKING: z
       .union([z.boolean(), z.enum(['true', 'false'])])

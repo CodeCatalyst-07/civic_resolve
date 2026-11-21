@@ -50,6 +50,7 @@ export function buildContainer(config: Config, overrides?: Partial<AppContainer>
       provider: aiProvider,
       cache,
       budget,
+      aiTotalDeadlineMs: config.AI_TOTAL_DEADLINE_MS,
     });
 
   const ticketService =

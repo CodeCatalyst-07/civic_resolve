@@ -52,10 +52,18 @@ export default defineConfig({
         'src/components/ui/**/*',
       ],
       thresholds: {
-        lines: 85,
-        statements: 85,
-        branches: 75,
-        functions: 80,
+        'src/components/**': {
+          lines: 85,
+          statements: 85,
+          branches: 85,
+          functions: 80,
+        },
+        'src/features/**': {
+          lines: 85,
+          statements: 85,
+          branches: 85,
+          functions: 80,
+        },
       },
       reporter: ['text', 'json', 'html'],
     },

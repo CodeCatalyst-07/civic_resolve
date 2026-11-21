@@ -53,6 +53,7 @@ export interface TriageServiceDeps {
   readonly cache?: TriageCache;
   readonly budget?: DailyAiBudget;
   readonly config?: DomainConfig;
+  readonly aiTotalDeadlineMs?: number;
   readonly logger?: {
     info(message: string, meta?: Record<string, unknown>): void;
     warn(message: string, meta?: Record<string, unknown>): void;
@@ -77,6 +78,7 @@ export function createTriageService(deps: TriageServiceDeps): TriageService {
   const budget = deps.budget ?? new InMemoryDailyAiBudget({ dailyLimit: 200 });
   const domainConfig = deps.config ?? DOMAIN_CONFIG;
   const logger = deps.logger ?? defaultLogger;
+  const aiTotalDeadlineMs = deps.aiTotalDeadlineMs ?? 20000;
 
   return {
     async analyze(input: TriageServiceInput): Promise<TriageServiceResult> {
@@ -131,23 +133,45 @@ export function createTriageService(deps: TriageServiceDeps): TriageService {
           isDegraded = true;
           degradedReason = 'budget_exhausted';
         } else {
-          const providerResult = await provider.triage({
-            text: trimmedText,
-            ward: input.ward,
-          });
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => {
+            abortController.abort();
+          }, aiTotalDeadlineMs);
 
-          if (providerResult.ok) {
+          let providerResult;
+          try {
+            providerResult = await Promise.race([
+              provider.triage(
+                {
+                  text: trimmedText,
+                  ward: input.ward,
+                },
+                { signal: abortController.signal }
+              ),
+              new Promise<never>((_, reject) => {
+                abortController.signal.addEventListener('abort', () => {
+                  reject(new Error('deadline_exceeded'));
+                });
+              }),
+            ]);
+          } catch {
+            providerResult = null;
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          if (providerResult && providerResult.ok) {
             suggestion = providerResult.value;
             aiSource = provider.name;
             budget.consume();
             // Store successful model suggestions in cache
             cache.set(cacheKey, suggestion, aiSource);
           } else {
-            // Provider error (timeout, unavailable, invalid) -> graceful keyword degradation
+            // Provider error (timeout, unavailable, invalid, deadline exceeded) -> graceful keyword degradation
             suggestion = classifyByKeywords(trimmedText);
             aiSource = AiSource.KEYWORD_FALLBACK;
             isDegraded = true;
-            degradedReason = providerResult.error.kind;
+            degradedReason = providerResult ? providerResult.error.kind : 'deadline_exceeded';
           }
         }
       }

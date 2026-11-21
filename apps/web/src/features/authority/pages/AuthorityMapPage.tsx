@@ -11,12 +11,33 @@ import { useRole } from '../../../hooks/useRole.js';
 import { UrgencyBadge } from '../../../components/UrgencyBadge.js';
 import { StatusPill } from '../../../components/StatusPill.js';
 
-const URGENCY_PINS = {
-  [Urgency.LOW]: { color: '#475569', shape: 'rounded-full', label: 'Circle (Low)' },
-  [Urgency.MEDIUM]: { color: '#A16207', shape: 'rounded-none', label: 'Square (Medium)' },
-  [Urgency.HIGH]: { color: '#C2410C', shape: 'rotate-45', label: 'Diamond (High)' },
-  [Urgency.CRITICAL]: { color: '#B91C1C', shape: 'rotate-45 ring-2 ring-red-400', label: 'Diamond (Critical)' },
-};
+function createPinElement(urgency: Urgency): HTMLElement {
+  const container = document.createElement('div');
+  container.style.width = '20px';
+  container.style.height = '20px';
+  container.style.cursor = 'pointer';
+
+  let svgInner = '';
+  switch (urgency) {
+    case Urgency.LOW:
+      svgInner = '<circle cx="10" cy="10" r="8" fill="#475569" stroke="#FFFFFF" stroke-width="2" />';
+      break;
+    case Urgency.MEDIUM:
+      svgInner = '<rect x="2" y="2" width="16" height="16" fill="#A16207" stroke="#FFFFFF" stroke-width="2" rx="1" />';
+      break;
+    case Urgency.HIGH:
+      svgInner = '<polygon points="10,2 19,18 1,18" fill="#C2410C" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />';
+      break;
+    case Urgency.CRITICAL:
+      svgInner = '<polygon points="10,2 18,10 10,18 2,10" fill="#B91C1C" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />';
+      break;
+    default:
+      svgInner = '<circle cx="10" cy="10" r="8" fill="#475569" stroke="#FFFFFF" stroke-width="2" />';
+  }
+
+  container.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));">${svgInner}</svg>`;
+  return container;
+}
 
 export const AuthorityMapPage: React.FC = () => {
   const { isAuthority } = useRole();
@@ -95,23 +116,9 @@ export const AuthorityMapPage: React.FC = () => {
         geoTickets.forEach((t) => {
           const lat = t.location!.lat!;
           const lng = t.location!.lng!;
-          const pinConfig = URGENCY_PINS[t.urgency] || URGENCY_PINS[Urgency.LOW];
 
           if (AdvancedMarker) {
-            // Create custom shaped badge element
-            const pinDiv = document.createElement('div');
-            pinDiv.style.width = '18px';
-            pinDiv.style.height = '18px';
-            pinDiv.style.backgroundColor = pinConfig.color;
-            pinDiv.style.border = '2px solid #FFFFFF';
-            pinDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-            pinDiv.style.cursor = 'pointer';
-
-            if (t.urgency === Urgency.LOW) {
-              pinDiv.style.borderRadius = '50%';
-            } else if (t.urgency === Urgency.HIGH || t.urgency === Urgency.CRITICAL) {
-              pinDiv.style.transform = 'rotate(45deg)';
-            }
+            const pinDiv = createPinElement(t.urgency);
 
             const marker = new AdvancedMarker({
               map,
@@ -189,20 +196,23 @@ export const AuthorityMapPage: React.FC = () => {
       <div className="flex flex-wrap items-center gap-6 p-3 bg-surface rounded-lg border border-border text-xs text-ink">
         <span className="font-semibold text-slate-700">Map Legend:</span>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-slate-600 inline-block" aria-hidden="true" />
-          <span>Circle: Minor (Low)</span>
+          <span className="w-3.5 h-3.5 rounded-full bg-slate-600 border border-white inline-block shadow-sm" aria-hidden="true" />
+          <span>Circle: Low</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 bg-amber-600 inline-block" aria-hidden="true" />
-          <span>Square: Routine (Medium)</span>
+          <span className="w-3.5 h-3.5 bg-amber-600 border border-white inline-block shadow-sm" aria-hidden="true" />
+          <span>Square: Medium</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rotate-45 bg-orange-600 inline-block" aria-hidden="true" />
-          <span>Diamond: Urgent (High)</span>
+          <span
+            className="w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[14px] border-b-orange-600 inline-block drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]"
+            aria-hidden="true"
+          />
+          <span>Triangle: High</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rotate-45 bg-red-600 ring-2 ring-red-400 inline-block" aria-hidden="true" />
-          <span>Diamond: Immediate Danger (Critical)</span>
+          <span className="w-3.5 h-3.5 rotate-45 bg-red-600 border border-white inline-block shadow-sm" aria-hidden="true" />
+          <span>Diamond: Critical</span>
         </div>
       </div>
 

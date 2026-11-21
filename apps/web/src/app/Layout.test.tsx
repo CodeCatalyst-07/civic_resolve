@@ -44,7 +44,7 @@ describe('Application Shell & Accessibility Landmarks', () => {
 
     const banner = screen.getByRole('note', { name: /demo mode notice/i });
     expect(banner).toBeInTheDocument();
-    expect(banner).toHaveTextContent(/demo mode: roles are not authenticated/i);
+    expect(banner).toHaveTextContent(/demo mode: staff view protected by demo access code/i);
   });
 
   it('allows toggling between Citizen and Authority roles via RoleSwitcher', async () => {

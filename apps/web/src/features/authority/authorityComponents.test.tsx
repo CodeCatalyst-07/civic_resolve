@@ -9,6 +9,7 @@ import {
   Urgency,
   Status,
   Role,
+  AiSource,
   type AuthorityTicketView,
 } from '@civicresolve/shared';
 import * as apiClientModule from '../../lib/apiClient.js';
@@ -385,6 +386,65 @@ describe('Authority Component Interactions & Logic', () => {
         });
       });
     });
+
+    it('renders detail panel honestly from minimal API response without invented data', async () => {
+      const minimalTicket: AuthorityTicketView = {
+        id: 'CR-MINIMAL1',
+        status: Status.SUBMITTED,
+        category: Category.POTHOLE,
+        urgency: Urgency.LOW,
+        department: 'Roads & Infrastructure',
+        summary: 'Minimal test pothole',
+        ward: 'Ward 1 - Kempegowda Ward',
+        created_at: new Date('2026-11-21T00:00:00.000Z').toISOString(),
+        due_at: new Date('2026-11-28T00:00:00.000Z').toISOString(),
+        overdue: false,
+        duplicate_count: 0,
+        reasons: [],
+        applied_rules: [],
+        timeline: [
+          {
+            id: 'evt-min-1',
+            status: Status.SUBMITTED,
+            role: Role.CITIZEN,
+            at: new Date('2026-11-21T00:00:00.000Z').toISOString(),
+          },
+        ],
+        emergency_notice: false,
+        description: 'Verbatim minimal complaint text reported by citizen.',
+        location: undefined,
+        ai_suggestion: null,
+        ai_source: AiSource.KEYWORD_FALLBACK,
+        needs_manual_triage: false,
+        escalated: false,
+        reopen_count: 0,
+        version: 1,
+      };
+
+      vi.mocked(mockApi.getAuthorityTicket).mockResolvedValueOnce(minimalTicket);
+
+      renderWithProviders(
+        <TicketDetailSheet
+          ticketId="CR-MINIMAL1"
+          open={true}
+          onOpenChange={() => {}}
+        />
+      );
+
+      // Asserts verbatim data from API response renders
+      expect(await screen.findByText('CR-MINIMAL1')).toBeInTheDocument();
+      expect(screen.getByText('Verbatim minimal complaint text reported by citizen.')).toBeInTheDocument();
+      expect(screen.getByText('Ward 1 - Kempegowda Ward')).toBeInTheDocument();
+      expect(screen.getByText(/rule-based triage applied without generative model suggestion/i)).toBeInTheDocument();
+
+      // Asserts that no invented, derived or unbacked elements appear
+      expect(screen.queryByText(/duplicate cluster/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/similar reports/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/add my support/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/similarity/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/life-safety hazard active/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/overdue/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('AuthorityMapPage', () => {
@@ -395,6 +455,12 @@ describe('Authority Component Interactions & Logic', () => {
 
       expect(await screen.findByText(/interactive map key not configured/i)).toBeInTheDocument();
       expect(screen.getByText(/accessible list of plotted grievance locations/i)).toBeInTheDocument();
+
+      // Verify urgency shape encoding in legend
+      expect(screen.getByText('Circle: Low')).toBeInTheDocument();
+      expect(screen.getByText('Square: Medium')).toBeInTheDocument();
+      expect(screen.getByText('Triangle: High')).toBeInTheDocument();
+      expect(screen.getByText('Diamond: Critical')).toBeInTheDocument();
 
       // Click "Open Details" in accessible list
       const openBtn = await screen.findByRole('button', { name: /open details/i });
