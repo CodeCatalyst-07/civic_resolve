@@ -223,3 +223,43 @@ Layer integrity is statically verified by custom ESLint boundary rules:
 - Pure generator `generateSeedTickets(now, randomBytes)` generates 39 realistic municipal grievance tickets across 8 synthetic wards.
 - Covers varied categories, statuses, overdue tickets, 2 duplicate clusters, and an active safety hazard.
 - CLI script `apps/api/scripts/seed.ts` supports seeding into both in-memory and live Cloud Firestore instances (`npm run seed -- --driver firestore`).
+
+---
+
+## 9. Frontend Architecture & Citizen Portal (Phase 2.4)
+
+### Component Hierarchy & Route Layout
+```text
+Layout (Semantic header, nav, SkipLink, DemoBanner, RoleSwitcher, main, footer)
+  │
+  ├── /               -> HomePage (Hero, How It Works, PublicStatsStrip, RecentReportsList, TrackBox)
+  ├── /report         -> ReportPage (Multi-Step Report Flow state machine)
+  │                        ├── Step 1: StepDescribe (Char counter 10-1000, live region, prompt chips)
+  │                        ├── Step 2: StepLocation (Ward selector, GPS geolocate, LocationMap)
+  │                        ├── Step 3: StepReview (TriageCard, SimilarReportsPanel, Category Override)
+  │                        └── Step 4: StepConfirmation (Crockford Base32 8-char code receipt, CopyButton)
+  ├── /track          -> TrackPage (Search & validation input for Crockford Base32 ticket codes)
+  ├── /track/:id      -> TrackPage (Public allowlist DTO view, Timeline, Support Button, ReopenDialog)
+  └── /authority      -> AuthorityPage (Accessible placeholder gate with role & demo code verification)
+```
+
+### Multi-Step State Machine Reducer (`features/citizen/state/reportFlow.ts`)
+The citizen submission journey is governed by a pure, deterministic reducer:
+- **`step`**: Sequential navigation (`describe` -> `location` -> `review` -> `confirmation`) with linear history backtracking.
+- **`analyze` trigger**: Transitioning from `location` to `review` dispatches an asynchronous call to `/api/reports/analyze`.
+- **Branching review screens**:
+  - `ticket`: Shows `TriageCard` with plain-language department, SLA target, applied safety rules, and optional category override.
+  - `follow_up`: Prompts citizen with targeted question and answer input field before resubmission.
+  - `rejected`: Displays non-civic guidance with clear explanation.
+  - `emergency`: Displays prominent 112 callout banner while maintaining ticket submission capability.
+- **Similar Reports Shortcut**: In `review`, duplicate candidates detected by backend are listed in `SimilarReportsPanel`; citizen can click "Add my voice" to support an existing issue instead of filing a duplicate.
+
+### Accessibility Architecture (WCAG 2.2 AA)
+- **Token Mathematics**: Tinted background tokens for all 4 urgency levels and 8 statuses are verified in `apps/web/src/styles/contrast.test.ts` to guarantee $\ge 4.5:1$ contrast against body ink and tinted backgrounds.
+- **Automated Axe Audits**: 14 distinct component and page permutations verified in `apps/web/src/test/a11y.test.tsx` with **0 violations**.
+- **Keyboard Journey**: End-to-end keyboard tab/enter traversal verified with `@testing-library/user-event` in `keyboardJourney.test.tsx`.
+- **Screen Reader Polish**: Character counters use `aria-live="polite"`; form submission errors render into an accessible `ErrorSummary` with `role="alert"`; skip-link targets `#main-content`.
+
+### Performance & Bundle Size Budget
+- Route-level code-splitting with `React.lazy` and `Suspense` ensures the initial JavaScript bundle is only **101.17 kB gzip** (under the 150 kB budget).
+- The Google Maps JS API is lazily loaded on-demand only when Step 2 (`StepLocation`) mounts, falling back gracefully to coordinate/ward inputs when no API key is provided.

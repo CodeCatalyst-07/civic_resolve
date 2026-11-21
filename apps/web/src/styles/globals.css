@@ -17,6 +17,15 @@
   --color-urgency-medium: #A16207;
   --color-urgency-low: #475569;
 
+  --color-status-submitted: #1D4ED8;
+  --color-status-under-review: #6D28D9;
+  --color-status-assigned: #0369A1;
+  --color-status-in-progress: #115E59;
+  --color-status-resolved: #166534;
+  --color-status-closed: #475569;
+  --color-status-rejected: #991B1B;
+  --color-status-reopened: #C2410C;
+
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
@@ -42,5 +51,35 @@
   /* Tabular numerals for ticket IDs and numerical data */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Accessible skip to main content link */
+  .skip-link {
+    position: absolute;
+    top: -9999px;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.75rem 1.25rem;
+    background-color: #1D4ED8;
+    color: #FFFFFF;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .skip-link:focus {
+    top: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

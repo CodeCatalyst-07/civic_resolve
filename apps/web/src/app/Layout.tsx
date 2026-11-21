@@ -4,8 +4,10 @@ import type { Role } from '@civicresolve/shared';
 import { SkipLink } from '../components/SkipLink.js';
 import { DemoBanner } from '../components/DemoBanner.js';
 import { RoleSwitcher } from '../components/RoleSwitcher.js';
-import { Building2 } from 'lucide-react';
+import { RoleDialog } from '../components/RoleDialog.js';
+import { Building2, Settings } from 'lucide-react';
 import { cn } from '../lib/utils.js';
+import { RoleContext } from '../hooks/useRole.js';
 
 interface LayoutProps {
   initialRole?: Role;
@@ -14,14 +16,24 @@ interface LayoutProps {
 /**
  * Primary accessible application shell providing landmarks, navigation, and role switching.
  */
-export function Layout({ initialRole = 'citizen' }: LayoutProps): React.JSX.Element {
-  const [currentRole, setCurrentRole] = React.useState<Role>(initialRole);
+export function Layout({ initialRole }: LayoutProps): React.JSX.Element {
+  const roleCtx = React.useContext(RoleContext);
+  const [localRole, setLocalRole] = React.useState<Role>(initialRole || 'citizen');
+
+  const currentRole = roleCtx ? roleCtx.role : localRole;
+  const [roleDialogOpen, setRoleDialogOpen] = React.useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleRoleChange = React.useCallback(
     (newRole: Role) => {
-      setCurrentRole(newRole);
+      if (roleCtx) {
+        roleCtx.setRole(newRole);
+      } else {
+        setLocalRole(newRole);
+      }
+
       // Convenience auto-navigation on explicit role switch
       if (newRole === 'authority' && !location.pathname.startsWith('/authority')) {
         navigate('/authority');
@@ -29,7 +41,7 @@ export function Layout({ initialRole = 'citizen' }: LayoutProps): React.JSX.Elem
         navigate('/');
       }
     },
-    [location.pathname, navigate]
+    [roleCtx, location.pathname, navigate]
   );
 
   return (
@@ -37,7 +49,7 @@ export function Layout({ initialRole = 'citizen' }: LayoutProps): React.JSX.Elem
       <SkipLink />
       <DemoBanner />
 
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm" role="banner">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-8">
             <NavLink
@@ -117,24 +129,37 @@ export function Layout({ initialRole = 'citizen' }: LayoutProps): React.JSX.Elem
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <RoleSwitcher currentRole={currentRole} onRoleChange={handleRoleChange} />
+            <button
+              type="button"
+              onClick={() => setRoleDialogOpen(true)}
+              className="p-1.5 rounded-md text-slate-400 hover:text-ink hover:bg-page transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+              aria-label="Demo mode role settings"
+            >
+              <Settings className="w-4 h-4" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </header>
 
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 outline-none">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 outline-none" role="main">
         <Outlet />
       </main>
 
-      <footer className="border-t border-border bg-surface py-6 text-center text-xs text-slate-500">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <p>CivicResolve — AI-Assisted Civic Grievance Management.</p>
-          <p className="mt-1">
-            Built for Google Hackathon demonstration. Follows strict accessibility and security standards.
+      <footer className="border-t border-border bg-surface py-6 text-center text-xs text-slate-500" role="contentinfo">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-1">
+          <p className="font-semibold text-ink">CivicResolve — AI-Assisted Civic Grievance Management</p>
+          <p>
+            Compliant with WCAG 2.2 AA accessibility standards. All municipal dispatches governed by statutory SLAs.
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Demonstration mode for Google Hackathon evaluation.
           </p>
         </div>
       </footer>
+
+      <RoleDialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen} />
     </div>
   );
 }

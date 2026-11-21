@@ -36,6 +36,11 @@ import {
   apiError,
   ok,
   err,
+  isValidTicketId,
+  triageOutcomeSchema,
+  systemStatsSchema,
+  analyzeResultSchema,
+  submitResultSchema,
 } from './index.js';
 
 describe('stripControlCharacters', () => {
@@ -567,5 +572,109 @@ describe('Phase 2.3 Shared DTO and Request Schemas', () => {
     const error = apiError(ApiErrorCode.VALIDATION_FAILED, 'Invalid input payload');
     expect(error.error.code).toBe('validation_failed');
     expect(error.error.message).toBe('Invalid input payload');
+  });
+
+  it('validates ticket ID regex and isValidTicketId helper', () => {
+    expect(isValidTicketId('CR-7X2K9M4P')).toBe(true);
+    expect(isValidTicketId('CR-00000000')).toBe(true);
+    expect(isValidTicketId('  CR-7X2K9M4P  ')).toBe(true);
+
+    // Invalid Crockford characters: I, L, O, U
+    expect(isValidTicketId('CR-1111111I')).toBe(false);
+    expect(isValidTicketId('CR-1111111L')).toBe(false);
+    expect(isValidTicketId('CR-1111111O')).toBe(false);
+    expect(isValidTicketId('CR-1111111U')).toBe(false);
+
+    // Invalid formats
+    expect(isValidTicketId('cr-7x2k9m4p')).toBe(false);
+    expect(isValidTicketId('TX-7X2K9M4P')).toBe(false);
+    expect(isValidTicketId('CR-123')).toBe(false);
+    expect(isValidTicketId('')).toBe(false);
+    expect(isValidTicketId(123 as unknown as string)).toBe(false);
+  });
+
+  it('validates triageOutcomeSchema variants', () => {
+    const rejected = triageOutcomeSchema.parse({
+      kind: 'rejected',
+      reason: 'Personal dispute',
+      guidance: 'Contact police',
+      emergency_notice: false,
+    });
+    expect(rejected.kind).toBe('rejected');
+
+    const followUp = triageOutcomeSchema.parse({
+      kind: 'follow_up',
+      question: 'Which street is the pothole located on?',
+      round: 1,
+    });
+    expect(followUp.kind).toBe('follow_up');
+
+    const ticketOutcome = triageOutcomeSchema.parse({
+      kind: 'ticket',
+      decision: {
+        category: 'pothole',
+        urgency: 'high',
+        department: 'roads',
+        applied_rules: [],
+        emergency_notice: false,
+        needs_manual_triage: false,
+        ai_suggestion: null,
+        ai_source: 'gemini',
+      },
+      needs_manual_triage: false,
+      emergency_notice: false,
+    });
+    expect(ticketOutcome.kind).toBe('ticket');
+  });
+
+  it('validates systemStatsSchema, analyzeResultSchema, and submitResultSchema', () => {
+    const stats = systemStatsSchema.parse({
+      open: 12,
+      resolved: 24,
+      critical_open: 2,
+      overdue: 1,
+      median_resolution_hours: 18.5,
+    });
+    expect(stats.open).toBe(12);
+
+    const analyze = analyzeResultSchema.parse({
+      outcome: {
+        kind: 'rejected',
+        reason: 'Out of scope',
+        guidance: 'None',
+        emergency_notice: false,
+      },
+      similar_reports: [
+        {
+          id: 'CR-12345678',
+          category: 'pothole',
+          urgency: 'medium',
+          status: 'submitted',
+          summary: 'Pothole on 100ft road',
+          duplicate_count: 0,
+          created_at: '2026-11-20T10:00:00.000Z',
+        },
+      ],
+      meta: {
+        ai_source: 'mock',
+        degraded: false,
+      },
+    });
+    expect(analyze.similar_reports.length).toBe(1);
+
+    const submit = submitResultSchema.parse({
+      outcome: {
+        kind: 'rejected',
+        reason: 'Out of scope',
+        guidance: 'None',
+        emergency_notice: false,
+      },
+      ticket: null,
+      meta: {
+        ai_source: 'mock',
+        degraded: false,
+      },
+    });
+    expect(submit.ticket).toBeNull();
   });
 });

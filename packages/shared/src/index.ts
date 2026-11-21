@@ -294,6 +294,102 @@ export const authorityTicketViewSchema = publicTicketViewSchema.extend({
 export type AuthorityTicketView = z.infer<typeof authorityTicketViewSchema>;
 
 /**
+ * Unguessable Crockford Base32 ticket identifier regex (e.g. CR-7X2K9M4P).
+ */
+export const TICKET_ID_REGEX = /^CR-[0-9A-HJKMNP-TV-Z]{8}$/;
+
+/**
+ * Validates whether a given string is a correctly formatted CivicResolve ticket ID.
+ */
+export function isValidTicketId(id: string): boolean {
+  if (typeof id !== 'string') {
+    return false;
+  }
+  return TICKET_ID_REGEX.test(id.trim());
+}
+
+/**
+ * Discriminated union outcome of the triage decision engine.
+ */
+export const triageOutcomeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('rejected'),
+    reason: z.string(),
+    guidance: z.string(),
+    emergency_notice: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal('follow_up'),
+    question: z.string(),
+    round: z.number().int().nonnegative(),
+  }),
+  z.object({
+    kind: z.literal('ticket'),
+    decision: finalDecisionSchema,
+    needs_manual_triage: z.boolean(),
+    emergency_notice: z.boolean(),
+  }),
+]);
+
+export type TriageOutcome = z.infer<typeof triageOutcomeSchema>;
+
+/**
+ * Public summary of a ticket for duplicate detection and recent lists.
+ */
+export const publicTicketSummarySchema = z.object({
+  id: z.string(),
+  category: categorySchema,
+  urgency: urgencySchema,
+  status: statusSchema,
+  summary: z.string(),
+  duplicate_count: z.number().int().nonnegative(),
+  created_at: z.string().datetime(),
+});
+
+export type PublicTicketSummary = z.infer<typeof publicTicketSummarySchema>;
+
+/**
+ * Pre-submission triage analysis result envelope.
+ */
+export const analyzeResultSchema = z.object({
+  outcome: triageOutcomeSchema,
+  similar_reports: z.array(publicTicketSummarySchema),
+  meta: z.object({
+    ai_source: aiSourceSchema,
+    degraded: z.boolean(),
+  }),
+});
+
+export type AnalyzeResult = z.infer<typeof analyzeResultSchema>;
+
+/**
+ * Submission response envelope.
+ */
+export const submitResultSchema = z.object({
+  outcome: triageOutcomeSchema,
+  ticket: publicTicketViewSchema.nullable(),
+  meta: z.object({
+    ai_source: aiSourceSchema,
+    degraded: z.boolean(),
+  }),
+});
+
+export type SubmitResult = z.infer<typeof submitResultSchema>;
+
+/**
+ * High-level system statistics for public transparency metrics.
+ */
+export const systemStatsSchema = z.object({
+  open: z.number().int().nonnegative(),
+  resolved: z.number().int().nonnegative(),
+  critical_open: z.number().int().nonnegative(),
+  overdue: z.number().int().nonnegative(),
+  median_resolution_hours: z.number().nonnegative(),
+});
+
+export type SystemStats = z.infer<typeof systemStatsSchema>;
+
+/**
  * Request schema for pre-submission triage analysis.
  */
 export const analyzeReportInputSchema = createReportInputSchema.extend({

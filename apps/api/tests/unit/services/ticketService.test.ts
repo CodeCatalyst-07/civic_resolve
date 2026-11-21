@@ -455,7 +455,7 @@ describe('TicketService (Unit Tests)', () => {
 
   it('listQueue returns internal_error when repository query fails', async () => {
     const originalQuery = repo.query.bind(repo);
-    repo.query = async () => err({ code: 'internal_error', message: 'Disk read failure' });
+    repo.query = async () => err({ code: 'internal', message: 'Disk read failure' });
 
     const qRes = await ticketService.listQueue({ limit: 10 });
     expect(qRes.ok).toBe(false);
@@ -490,7 +490,7 @@ describe('TicketService (Unit Tests)', () => {
     if (!reopenConflict.ok) expect(reopenConflict.error.code).toBe('conflict');
 
     // Reopen fails with internal_error
-    repo.update = async () => err({ code: 'internal_error', message: 'Storage crash' });
+    repo.update = async () => err({ code: 'internal', message: 'Storage crash' });
     const reopenErr = await ticketService.reopenTicket(ticketId, 'Still sinking');
     expect(reopenErr.ok).toBe(false);
     if (!reopenErr.ok) expect(reopenErr.error.code).toBe('internal_error');
@@ -505,7 +505,7 @@ describe('TicketService (Unit Tests)', () => {
     if (!overrideConflict.ok) expect(overrideConflict.error.code).toBe('conflict');
 
     // Override fails with internal_error
-    repo.update = async () => err({ code: 'internal_error', message: 'DB crash' });
+    repo.update = async () => err({ code: 'internal', message: 'DB crash' });
     const overrideErr = await ticketService.overrideTriage(ticketId, {
       urgency: Urgency.CRITICAL,
       reason: 'Safety audit escalation',
@@ -529,7 +529,7 @@ describe('TicketService (Unit Tests)', () => {
     expect(resConflict.ok).toBe(false);
     if (!resConflict.ok) expect(resConflict.error.code).toBe('conflict');
 
-    repo.update = async () => err({ code: 'internal_error', message: 'Disk down' });
+    repo.update = async () => err({ code: 'internal', message: 'Disk down' });
     const resErr = await ticketService.updateStatus(ticketId, { status: Status.UNDER_REVIEW });
     expect(resErr.ok).toBe(false);
     if (!resErr.ok) expect(resErr.error.code).toBe('internal_error');

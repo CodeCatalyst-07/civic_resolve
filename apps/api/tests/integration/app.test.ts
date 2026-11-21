@@ -3,7 +3,7 @@ import request from 'supertest';
 import { Status, Urgency, Category } from '@civicresolve/shared';
 import { createApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
-import { buildContainer } from '../../src/compose.js';
+import { buildContainer, type AppContainer } from '../../src/compose.js';
 import { InMemoryTicketRepository } from '../../src/repo/memory.js';
 
 describe('API Integration Tests', () => {
