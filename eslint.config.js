@@ -42,14 +42,27 @@ export default tseslint.config(
     },
   },
   {
-    // Architectural Boundary Enforcement:
-    // apps/api/src/domain/ is strictly pure domain functions.
-    // It must NEVER import from ai/, repo/, or http/ layers.
+    // Architectural Boundary & Purity Enforcement for Domain Layer:
+    // 1. apps/api/src/domain/ is strictly pure domain functions.
+    // 2. It must NEVER import from ai/, repo/, or http/ layers.
+    // 3. It must NEVER use non-deterministic Date.now, new Date(), Math.random, or crypto imports.
     files: ['apps/api/src/domain/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: 'crypto',
+              message:
+                'Purity Violation: Do not import crypto in domain layer. Randomness must be injected as parameters.',
+            },
+            {
+              name: 'node:crypto',
+              message:
+                'Purity Violation: Do not import node:crypto in domain layer. Randomness must be injected as parameters.',
+            },
+          ],
           patterns: [
             {
               group: [
@@ -76,6 +89,29 @@ export default tseslint.config(
                 'Architectural Boundary Violation: Domain layer must remain pure and cannot import from ai/, repo/, or http/ layers.',
             },
           ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Date',
+          property: 'now',
+          message:
+            'Purity Violation: Date.now() is non-deterministic. Inject time as a `now: Date` parameter.',
+        },
+        {
+          object: 'Math',
+          property: 'random',
+          message:
+            'Purity Violation: Math.random() is non-deterministic. Inject randomness as parameters (e.g. randomBytes: Uint8Array).',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'NewExpression[callee.name="Date"][arguments.length=0]',
+          message:
+            'Purity Violation: new Date() with no arguments is non-deterministic. Inject time as a `now: Date` parameter.',
         },
       ],
     },

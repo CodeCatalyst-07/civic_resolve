@@ -71,11 +71,35 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role];
 export const ROLES = Object.values(Role) as [Role, ...Role[]];
 
+/**
+ * Municipal departments responsible for resolving civic grievances.
+ */
+export const Department = {
+  ROADS: 'roads',
+  SANITATION: 'sanitation',
+  PUBLIC_LIGHTING: 'public_lighting',
+  WATER_SEWERAGE: 'water_sewerage',
+  PARKS_HORTICULTURE: 'parks_horticulture',
+  PUBLIC_HEALTH_SAFETY: 'public_health_safety',
+  WARD_OFFICE: 'ward_office',
+} as const;
+
+export type Department = (typeof Department)[keyof typeof Department];
+export const DEPARTMENTS = Object.values(Department) as [Department, ...Department[]];
+
 // Zod schemas for enums
 export const categorySchema = z.enum(CATEGORIES);
 export const urgencySchema = z.enum(URGENCIES);
 export const statusSchema = z.enum(STATUSES);
 export const roleSchema = z.enum(ROLES);
+export const departmentSchema = z.enum(DEPARTMENTS);
+
+/**
+ * Missing information categories that prompt follow-up questions.
+ */
+export const MISSING_INFO_FIELDS = ['location', 'issue_type', 'severity', 'landmark'] as const;
+export type MissingInfoField = (typeof MISSING_INFO_FIELDS)[number];
+export const missingInfoFieldSchema = z.enum(MISSING_INFO_FIELDS);
 
 /**
  * Location schema for civic reports.
@@ -114,3 +138,115 @@ export const createReportInputSchema = z.object({
 });
 
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
+
+/**
+ * AI Triage Suggestion schema returned by the AI provider layer.
+ */
+export const triageSuggestionSchema = z.object({
+  is_civic_issue: z.boolean(),
+  category: categorySchema,
+  urgency: urgencySchema,
+  safety_critical: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  summary: z.string().trim().max(160, 'Summary cannot exceed 160 characters'),
+  reasons: z.array(z.string().trim().max(140, 'Reason cannot exceed 140 characters')).min(1).max(4),
+  missing_info: z.array(missingInfoFieldSchema).max(4),
+});
+
+export type TriageSuggestion = z.infer<typeof triageSuggestionSchema>;
+
+/**
+ * A deterministic rule applied during triage.
+ */
+export const appliedRuleSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  effect: z.string(),
+});
+
+export type AppliedRule = z.infer<typeof appliedRuleSchema>;
+
+/**
+ * Final triage decision combining AI suggestion and domain rules engine.
+ */
+export const finalDecisionSchema = z.object({
+  urgency: urgencySchema,
+  category: categorySchema,
+  department: departmentSchema.nullable(),
+  applied_rules: z.array(appliedRuleSchema),
+  emergency_notice: z.boolean(),
+  needs_manual_triage: z.boolean(),
+  ai_suggestion: triageSuggestionSchema.nullable(),
+});
+
+export type FinalDecision = z.infer<typeof finalDecisionSchema>;
+
+/**
+ * Ticket event recording lifecycle transitions and audits.
+ */
+export const ticketEventSchema = z.object({
+  id: z.string(),
+  status: statusSchema,
+  actor_role: roleSchema,
+  note: z.string().optional(),
+  at: z.string().datetime(),
+});
+
+export type TicketEvent = z.infer<typeof ticketEventSchema>;
+
+/**
+ * Ticket location details.
+ */
+export const ticketLocationSchema = z.object({
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  address: z.string().trim().max(200).optional(),
+});
+
+export type TicketLocation = z.infer<typeof ticketLocationSchema>;
+
+/**
+ * Canonical grievance ticket entity.
+ */
+export const ticketSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  category: categorySchema,
+  urgency: urgencySchema,
+  department: departmentSchema.nullable(),
+  ward: z.string().optional(),
+  location: ticketLocationSchema.optional(),
+  status: statusSchema,
+  events: z.array(ticketEventSchema),
+  duplicate_of: z.string().optional(),
+  duplicate_count: z.number().int().nonnegative(),
+  reopen_count: z.number().int().nonnegative(),
+  created_at: z.string().datetime(),
+  due_at: z.string().datetime(),
+  escalated: z.boolean(),
+  final_decision: finalDecisionSchema,
+  attachments: z.array(z.string()),
+});
+
+export type Ticket = z.infer<typeof ticketSchema>;
+
+/**
+ * Functional Result pattern for expected failures without throwing.
+ */
+export type Result<T, E = string> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: E };
+
+/**
+ * Construct a successful Result.
+ */
+export function ok<T>(value: T): Result<T, never> {
+  return Object.freeze({ ok: true, value });
+}
+
+/**
+ * Construct an error Result.
+ */
+export function err<E>(error: E): Result<never, E> {
+  return Object.freeze({ ok: false, error });
+}

@@ -6,11 +6,21 @@ import {
   Urgency,
   Status,
   Role,
+  Department,
   CATEGORIES,
   URGENCIES,
   STATUSES,
   ROLES,
+  DEPARTMENTS,
   categorySchema,
+  departmentSchema,
+  triageSuggestionSchema,
+  appliedRuleSchema,
+  finalDecisionSchema,
+  ticketEventSchema,
+  ticketSchema,
+  ok,
+  err,
 } from './index.js';
 
 describe('stripControlCharacters', () => {
@@ -115,6 +125,7 @@ describe('createReportInputSchema', () => {
 
 describe('Taxonomy Enums', () => {
   it('exports all expected Category values', () => {
+    expect(CATEGORIES).toHaveLength(9);
     expect(CATEGORIES).toContain(Category.POTHOLE);
     expect(CATEGORIES).toContain(Category.GARBAGE);
     expect(CATEGORIES).toContain(Category.STREETLIGHT);
@@ -124,7 +135,6 @@ describe('Taxonomy Enums', () => {
     expect(CATEGORIES).toContain(Category.PUBLIC_HAZARD);
     expect(CATEGORIES).toContain(Category.OTHER_CIVIC);
     expect(CATEGORIES).toContain(Category.NOT_CIVIC);
-    expect(CATEGORIES).toHaveLength(9);
   });
 
   it('exports all expected Urgency values', () => {
@@ -148,8 +158,248 @@ describe('Taxonomy Enums', () => {
     expect(ROLES).toEqual([Role.CITIZEN, Role.AUTHORITY]);
   });
 
+  it('exports all expected Department values', () => {
+    expect(DEPARTMENTS).toHaveLength(7);
+    expect(DEPARTMENTS).toContain(Department.ROADS);
+    expect(DEPARTMENTS).toContain(Department.SANITATION);
+    expect(DEPARTMENTS).toContain(Department.PUBLIC_LIGHTING);
+    expect(DEPARTMENTS).toContain(Department.WATER_SEWERAGE);
+    expect(DEPARTMENTS).toContain(Department.PARKS_HORTICULTURE);
+    expect(DEPARTMENTS).toContain(Department.PUBLIC_HEALTH_SAFETY);
+    expect(DEPARTMENTS).toContain(Department.WARD_OFFICE);
+  });
+
   it('validates categories using categorySchema', () => {
     expect(categorySchema.parse('pothole')).toBe(Category.POTHOLE);
     expect(() => categorySchema.parse('invalid_category')).toThrow();
+  });
+
+  it('validates departments using departmentSchema', () => {
+    expect(departmentSchema.parse('roads')).toBe(Department.ROADS);
+    expect(() => departmentSchema.parse('finance')).toThrow();
+  });
+});
+
+describe('TriageSuggestion Schema', () => {
+  it('validates a correct TriageSuggestion', () => {
+    const valid = {
+      is_civic_issue: true,
+      category: 'pothole',
+      urgency: 'high',
+      safety_critical: false,
+      confidence: 0.85,
+      summary: 'Deep pothole on main road',
+      reasons: ['Visible road damage', 'Traffic disruption observed'],
+      missing_info: ['landmark'],
+    };
+
+    const parsed = triageSuggestionSchema.parse(valid);
+    expect(parsed.confidence).toBe(0.85);
+    expect(parsed.reasons).toHaveLength(2);
+    expect(parsed.missing_info).toEqual(['landmark']);
+  });
+
+  it('rejects out of bounds confidence scores', () => {
+    const invalidLow = {
+      is_civic_issue: true,
+      category: 'pothole',
+      urgency: 'medium',
+      safety_critical: false,
+      confidence: -0.1,
+      summary: 'Summary',
+      reasons: ['Reason'],
+      missing_info: [],
+    };
+    expect(() => triageSuggestionSchema.parse(invalidLow)).toThrow();
+
+    const invalidHigh = {
+      ...invalidLow,
+      confidence: 1.05,
+    };
+    expect(() => triageSuggestionSchema.parse(invalidHigh)).toThrow();
+  });
+
+  it('rejects summary longer than 160 characters', () => {
+    const invalid = {
+      is_civic_issue: true,
+      category: 'pothole',
+      urgency: 'medium',
+      safety_critical: false,
+      confidence: 0.7,
+      summary: 'S'.repeat(161),
+      reasons: ['Valid reason'],
+      missing_info: [],
+    };
+    expect(() => triageSuggestionSchema.parse(invalid)).toThrow(/160 characters/);
+  });
+
+  it('rejects empty reasons array or more than 4 reasons', () => {
+    const noReasons = {
+      is_civic_issue: true,
+      category: 'garbage',
+      urgency: 'low',
+      safety_critical: false,
+      confidence: 0.9,
+      summary: 'Summary',
+      reasons: [],
+      missing_info: [],
+    };
+    expect(() => triageSuggestionSchema.parse(noReasons)).toThrow();
+
+    const tooManyReasons = {
+      ...noReasons,
+      reasons: ['R1', 'R2', 'R3', 'R4', 'R5'],
+    };
+    expect(() => triageSuggestionSchema.parse(tooManyReasons)).toThrow();
+  });
+
+  it('rejects reason longer than 140 characters', () => {
+    const invalidReason = {
+      is_civic_issue: true,
+      category: 'pothole',
+      urgency: 'medium',
+      safety_critical: false,
+      confidence: 0.8,
+      summary: 'Valid summary',
+      reasons: ['R'.repeat(141)],
+      missing_info: [],
+    };
+    expect(() => triageSuggestionSchema.parse(invalidReason)).toThrow(/140 characters/);
+  });
+});
+
+describe('AppliedRule and FinalDecision Schemas', () => {
+  it('validates appliedRuleSchema', () => {
+    const rule = {
+      id: 'R3_LOCATION_BOOST',
+      label: 'Reported near a school or hospital (safety rule)',
+      effect: 'Urgency raised to High',
+    };
+    expect(appliedRuleSchema.parse(rule)).toEqual(rule);
+  });
+
+  it('validates finalDecisionSchema with null department for not_civic', () => {
+    const decision = {
+      urgency: 'low',
+      category: 'not_civic',
+      department: null,
+      applied_rules: [],
+      emergency_notice: false,
+      needs_manual_triage: false,
+      ai_suggestion: null,
+    };
+    const parsed = finalDecisionSchema.parse(decision);
+    expect(parsed.department).toBeNull();
+  });
+});
+
+describe('Ticket and TicketEvent Schemas', () => {
+  const mockNow = new Date('2026-11-21T10:00:00.000Z').toISOString();
+
+  it('validates ticketEventSchema with valid ISO datetime', () => {
+    const event = {
+      id: 'evt-1',
+      status: 'submitted',
+      actor_role: 'citizen',
+      note: 'Initial submission',
+      at: mockNow,
+    };
+    expect(ticketEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('rejects ticketEventSchema with invalid datetime', () => {
+    const event = {
+      id: 'evt-1',
+      status: 'submitted',
+      actor_role: 'citizen',
+      at: 'not-a-datetime',
+    };
+    expect(() => ticketEventSchema.parse(event)).toThrow();
+  });
+
+  it('validates full ticketSchema', () => {
+    const ticket = {
+      id: 'CR-3A4B5C6D',
+      description: 'Open manhole emitting foul odor near residential gate.',
+      category: 'sewer_overflow',
+      urgency: 'critical',
+      department: 'water_sewerage',
+      ward: 'Ward 14',
+      location: { lat: 12.9716, lng: 77.5946, address: 'Near St. Mary School' },
+      status: 'submitted',
+      events: [
+        {
+          id: 'evt-1',
+          status: 'submitted',
+          actor_role: 'citizen',
+          at: mockNow,
+        },
+      ],
+      duplicate_count: 0,
+      reopen_count: 0,
+      created_at: mockNow,
+      due_at: new Date('2026-11-22T10:00:00.000Z').toISOString(),
+      escalated: false,
+      final_decision: {
+        urgency: 'critical',
+        category: 'sewer_overflow',
+        department: 'water_sewerage',
+        applied_rules: [],
+        emergency_notice: false,
+        needs_manual_triage: false,
+        ai_suggestion: null,
+      },
+      attachments: [],
+    };
+
+    expect(ticketSchema.parse(ticket).id).toBe('CR-3A4B5C6D');
+  });
+
+  it('rejects negative duplicate or reopen counts', () => {
+    const baseTicket = {
+      id: 'CR-3A4B5C6D',
+      description: 'Pothole on 4th cross road.',
+      category: 'pothole',
+      urgency: 'medium',
+      department: 'roads',
+      status: 'submitted',
+      events: [],
+      duplicate_count: -1,
+      reopen_count: 0,
+      created_at: mockNow,
+      due_at: mockNow,
+      escalated: false,
+      final_decision: {
+        urgency: 'medium',
+        category: 'pothole',
+        department: 'roads',
+        applied_rules: [],
+        emergency_notice: false,
+        needs_manual_triage: false,
+        ai_suggestion: null,
+      },
+      attachments: [],
+    };
+    expect(() => ticketSchema.parse(baseTicket)).toThrow();
+  });
+});
+
+describe('Result helper functions', () => {
+  it('ok returns a frozen ok result', () => {
+    const res = ok(42);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value).toBe(42);
+    }
+    expect(Object.isFrozen(res)).toBe(true);
+  });
+
+  it('err returns a frozen error result', () => {
+    const res = err('Invalid transition');
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error).toBe('Invalid transition');
+    }
+    expect(Object.isFrozen(res)).toBe(true);
   });
 });
